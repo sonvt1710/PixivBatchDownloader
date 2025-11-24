@@ -531,6 +531,16 @@ class Utils {
       reader.readAsDataURL(blob)
     })
   }
+
+  static async writeClipboardText(text: string) {
+    try {
+      await window.navigator.clipboard.writeText(text)
+      return true
+    } catch (error: Error | any) {
+      console.error('Writing to clipboard failed', error.message)
+      return false
+    }
+  }
 }
 
 export { Utils }

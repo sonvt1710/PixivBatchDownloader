@@ -96,6 +96,16 @@ class MergeNovel {
     const link = `<a href="https://www.pixiv.net/novel/series/${this.seriesId}" target="_blank">${this.seriesTitle || this.seriesId}</a>`
     log.log(`📚${lang.transl('_合并系列小说')} ${link}`)
 
+    if (settings.novelSaveAs === 'txt') {
+      // 如果用户选择的保存格式是 txt，显示提示。因为很多小说阅读器都无法识别 txt 里的章节标记
+      log.warning(
+        lang.transl('_合并小说时提示用户使用EPUB格式'),
+        1,
+        false,
+        'mergeNovelRecommendEPUB'
+      )
+    }
+
     // 在系列小说页面里执行时，关闭设置面板
     // 在其他页面类型里不关闭设置面板，因为在其他页面里可能需要合并多个系列小说，会导致多次关闭设置面板。这可能会影响用户正常使用设置面板
     if (pageType.type === pageType.list.NovelSeries) {
@@ -172,7 +182,15 @@ class MergeNovel {
     if (pageType.type === pageType.list.NovelSeries) {
       toast.success(`${lang.transl('_已合并系列小说')}`)
     }
-    return this.allNovelData.length
+
+    // 清除数据以减少内存占用
+    window.setTimeout(() => {
+      this.reset()
+    }, 1000)
+
+    // 返回该系列里的小说数量
+    const total = this.allNovelData.length
+    return total
   }
 
   private async mergeTXT(novelName: string): Promise<Blob> {
@@ -203,7 +221,7 @@ class MergeNovel {
         a.push(this.seriesTitle)
         a.push(CRLF_2)
         // 作者
-        a.push(this.userName)
+        a.push(`${lang.transl('_作者')}: ` + this.userName)
         a.push(CRLF_2)
         // 系列网址
         const link = `https://www.pixiv.net/novel/series/${this.seriesId}`
@@ -243,9 +261,11 @@ class MergeNovel {
       // 添加每篇小说的内容
       for (const data of this.allNovelData) {
         // 添加章节编号
-        // 让编号独占一行。如果编号和标题在一行里，会导致静读天下无法识别目录
+        // 让编号独占一行。如果编号和标题在一行里，会导致无法识别目录
         text.push(`${this.chapterNo(data.no)}`)
-        text.push(this.CRLF)
+        // 我测试了 Android 上的静读天下（Moon+ Reader），对于 txt 小说，它可以识别中文的“第x章”这样的章节名
+        // 但如果使用英语章节名如 Chapter 1 就识别不出来，我尝试了各种格式都不行，放弃了
+        text.push(this.CRLF2)
         text.push(data.title)
         text.push(this.CRLF2)
         // 添加小说的元数据，内容包含：
@@ -667,14 +687,14 @@ class MergeNovel {
   }
 
   // 在每个小说的开头加上章节编号
-  // 在 TXT 格式的小说里添加章节编号，可以使小说阅读软件能够识别章节，以及显示章节导航，提高阅读体验
+  // 在 TXT 格式的小说里添加章节编号，可以使小说阅读软件能够识别章节、显示目录，提高阅读体验
   // 对于 EPUB 格式的小说，由于其内部自带分章结构，所以并不依赖这里的章节编号
   private chapterNo(number: number | string) {
     // 对于中文区，使用“第N章”。这样最容易被国内的小说阅读软件识别出来
     if (lang.type === 'zh-cn' || lang.type === 'zh-tw' || lang.type === 'ja') {
       return `第${number}章`
     } else {
-      // 对于其他地区，使用 `Chapter N`。但是由于我没有使用过国外的小说阅读软件，所以并不清楚效果如何
+      // 对于其他地区，使用 `Chapter N`
       return `Chapter ${number}`
     }
     // 我还尝试过使用 #1 这样的编号，但是阅读器对这种编号的识别情况不够好
@@ -683,6 +703,14 @@ class MergeNovel {
   private logDownloadSeriesCover() {
     const link = `<a href="https://www.pixiv.net/novel/series/${this.seriesId}" target="_blank">${this.seriesTitle}</a>`
     log.log(lang.transl('_下载系列小说的封面图片', link))
+  }
+
+  private reset() {
+    this.allNovelData = []
+    this.novelIdList = []
+    this.seriesTags = []
+    this.seriesId = ''
+    this.seriesTitle = ''
   }
 }
 

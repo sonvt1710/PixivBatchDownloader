@@ -157,6 +157,7 @@ class AutoMergeNovel {
     // 每次抓取期间只显示一次提示
     if (this.enableTip) {
       this.enableTip = false
+
       // 在窗口中间显示轻提示，这是因为“开始抓取”的提示也位于中间，保持一致
       toast.warning(lang.transl('_自动合并系列小说'), {
         position: 'center',

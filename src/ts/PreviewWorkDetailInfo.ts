@@ -164,8 +164,7 @@ class PreviewWorkDetailInfo {
 
     wrap.querySelector('#copyURL')!.addEventListener('click', () => {
       const url = `https://www.pixiv.net/i/${workData.body.id}`
-      window.navigator.clipboard.writeText(url)
-      toast.success(lang.transl('_已复制到剪贴板'))
+      this.copy(url)
     })
 
     wrap.querySelector('#copyBtn')!.addEventListener('click', () => {
@@ -287,14 +286,21 @@ class PreviewWorkDetailInfo {
     array.push(`Date\n${new Date(body.uploadDate).toLocaleString()}`)
 
     const text = array.join('\n\n')
-    window.navigator.clipboard.writeText(text)
-    toast.success(lang.transl('_已复制到剪贴板'))
+    this.copy(text)
   }
 
   private copyJSON(workData: ArtworkData) {
     const text = JSON.stringify(workData, null, 2)
-    window.navigator.clipboard.writeText(text)
-    toast.success(lang.transl('_已复制到剪贴板'))
+    this.copy(text)
+  }
+
+  private async copy(text: string) {
+    const copied = await Utils.writeClipboardText(text)
+    if (copied) {
+      toast.success(lang.transl('_已复制到剪贴板'))
+    } else {
+      toast.error(lang.transl('_写入剪贴板失败'))
+    }
   }
 }
 

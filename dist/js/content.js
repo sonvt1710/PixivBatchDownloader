@@ -7670,8 +7670,7 @@ class PreviewWorkDetailInfo {
         });
         wrap.querySelector('#copyURL').addEventListener('click', () => {
             const url = `https://www.pixiv.net/i/${workData.body.id}`;
-            window.navigator.clipboard.writeText(url);
-            _Toast__WEBPACK_IMPORTED_MODULE_6__.toast.success(_Language__WEBPACK_IMPORTED_MODULE_5__.lang.transl('_已复制到剪贴板'));
+            this.copy(url);
         });
         wrap.querySelector('#copyBtn').addEventListener('click', () => {
             _CopyWorkInfo__WEBPACK_IMPORTED_MODULE_7__.copyWorkInfo.receive({
@@ -7762,13 +7761,20 @@ class PreviewWorkDetailInfo {
         array.push(`Bookmark\n${body.bookmarkCount}`);
         array.push(`Date\n${new Date(body.uploadDate).toLocaleString()}`);
         const text = array.join('\n\n');
-        window.navigator.clipboard.writeText(text);
-        _Toast__WEBPACK_IMPORTED_MODULE_6__.toast.success(_Language__WEBPACK_IMPORTED_MODULE_5__.lang.transl('_已复制到剪贴板'));
+        this.copy(text);
     }
     copyJSON(workData) {
         const text = JSON.stringify(workData, null, 2);
-        window.navigator.clipboard.writeText(text);
-        _Toast__WEBPACK_IMPORTED_MODULE_6__.toast.success(_Language__WEBPACK_IMPORTED_MODULE_5__.lang.transl('_已复制到剪贴板'));
+        this.copy(text);
+    }
+    async copy(text) {
+        const copied = await _utils_Utils__WEBPACK_IMPORTED_MODULE_4__.Utils.writeClipboardText(text);
+        if (copied) {
+            _Toast__WEBPACK_IMPORTED_MODULE_6__.toast.success(_Language__WEBPACK_IMPORTED_MODULE_5__.lang.transl('_已复制到剪贴板'));
+        }
+        else {
+            _Toast__WEBPACK_IMPORTED_MODULE_6__.toast.error(_Language__WEBPACK_IMPORTED_MODULE_5__.lang.transl('_写入剪贴板失败'));
+        }
     }
 }
 const previewWorkDetailInfo = new PreviewWorkDetailInfo();
@@ -21430,6 +21436,10 @@ class MergeNovel {
         this.slowMode = autoMerge;
         const link = `<a href="https://www.pixiv.net/novel/series/${this.seriesId}" target="_blank">${this.seriesTitle || this.seriesId}</a>`;
         _Log__WEBPACK_IMPORTED_MODULE_7__.log.log(`📚${_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_合并系列小说')} ${link}`);
+        if (_setting_Settings__WEBPACK_IMPORTED_MODULE_2__.settings.novelSaveAs === 'txt') {
+            // 如果用户选择的保存格式是 txt，显示提示。因为很多小说阅读器都无法识别 txt 里的章节标记
+            _Log__WEBPACK_IMPORTED_MODULE_7__.log.warning(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_合并小说时提示用户使用EPUB格式'), 1, false, 'mergeNovelRecommendEPUB');
+        }
         // 在系列小说页面里执行时，关闭设置面板
         // 在其他页面类型里不关闭设置面板，因为在其他页面里可能需要合并多个系列小说，会导致多次关闭设置面板。这可能会影响用户正常使用设置面板
         if (_PageType__WEBPACK_IMPORTED_MODULE_13__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_13__.pageType.list.NovelSeries) {
@@ -21493,7 +21503,13 @@ class MergeNovel {
         if (_PageType__WEBPACK_IMPORTED_MODULE_13__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_13__.pageType.list.NovelSeries) {
             _Toast__WEBPACK_IMPORTED_MODULE_10__.toast.success(`${_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_已合并系列小说')}`);
         }
-        return this.allNovelData.length;
+        // 清除数据以减少内存占用
+        window.setTimeout(() => {
+            this.reset();
+        }, 1000);
+        // 返回该系列里的小说数量
+        const total = this.allNovelData.length;
+        return total;
     }
     async mergeTXT(novelName) {
         return new Promise(async (resolve, reject) => {
@@ -21513,7 +21529,7 @@ class MergeNovel {
                 a.push(this.seriesTitle);
                 a.push(CRLF_2);
                 // 作者
-                a.push(this.userName);
+                a.push(`${_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_作者')}: ` + this.userName);
                 a.push(CRLF_2);
                 // 系列网址
                 const link = `https://www.pixiv.net/novel/series/${this.seriesId}`;
@@ -21550,9 +21566,12 @@ class MergeNovel {
             }
             // 添加每篇小说的内容
             for (const data of this.allNovelData) {
-                // 添加章节名（标题）
+                // 添加章节编号
+                // 让编号独占一行。如果编号和标题在一行里，会导致无法识别目录
                 text.push(`${this.chapterNo(data.no)}`);
-                text.push(this.CRLF);
+                // 我测试了 Android 上的静读天下（Moon+ Reader），对于 txt 小说，它可以识别中文的“第x章”这样的章节名
+                // 但如果使用英语章节名如 Chapter 1 就识别不出来，我尝试了各种格式都不行，放弃了
+                text.push(this.CRLF2);
                 text.push(data.title);
                 text.push(this.CRLF2);
                 // 添加小说的元数据，内容包含：
@@ -21885,7 +21904,7 @@ class MergeNovel {
         return _Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.replaceEPUBTextWithP(_Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.replaceEPUBDescription(_utils_Utils__WEBPACK_IMPORTED_MODULE_1__.Utils.htmlToText(_utils_Utils__WEBPACK_IMPORTED_MODULE_1__.Utils.htmlDecode(htmlString))));
     }
     // 在每个小说的开头加上章节编号
-    // 在 TXT 格式的小说里添加章节编号，可以使小说阅读软件能够识别章节，以及显示章节导航，提高阅读体验
+    // 在 TXT 格式的小说里添加章节编号，可以使小说阅读软件能够识别章节、显示目录，提高阅读体验
     // 对于 EPUB 格式的小说，由于其内部自带分章结构，所以并不依赖这里的章节编号
     chapterNo(number) {
         // 对于中文区，使用“第N章”。这样最容易被国内的小说阅读软件识别出来
@@ -21893,7 +21912,7 @@ class MergeNovel {
             return `第${number}章`;
         }
         else {
-            // 对于其他地区，使用 `Chapter N`。但是由于我没有使用过国外的小说阅读软件，所以并不清楚效果如何
+            // 对于其他地区，使用 `Chapter N`
             return `Chapter ${number}`;
         }
         // 我还尝试过使用 #1 这样的编号，但是阅读器对这种编号的识别情况不够好
@@ -21901,6 +21920,13 @@ class MergeNovel {
     logDownloadSeriesCover() {
         const link = `<a href="https://www.pixiv.net/novel/series/${this.seriesId}" target="_blank">${this.seriesTitle}</a>`;
         _Log__WEBPACK_IMPORTED_MODULE_7__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_下载系列小说的封面图片', link));
+    }
+    reset() {
+        this.allNovelData = [];
+        this.novelIdList = [];
+        this.seriesTags = [];
+        this.seriesId = '';
+        this.seriesTitle = '';
     }
 }
 
@@ -27524,6 +27550,7 @@ So the file name set by the Downloader is lost, and the file name becomes the la
         '소설의 제목, 저자, 태그 및 기타 정보를 소설의 시작 부분에 저장합니다.',
         'Сохраните название романа, автора, теги и другую информацию в начале романа.',
     ],
+    _作者: [`作者`, `作者`, `Author`, `作者`, `작가`, `Автор`],
     _正在下载小说x中的插画x: [
         `下载小说 {} 中的插画 {}`,
         `下載小說 {} 中的插畫 {}`,
@@ -32096,6 +32123,14 @@ If you want to use this feature, please note:
         `시리즈 소설 자동 병합 시작<br>각 시리즈에 여러 소설과 이미지가 포함될 수 있으므로, 다운로더가 많은 요청을 보낼 수 있습니다. Pixiv의 경고를 피하기 위해, 병합 시 항상 간격 시간을 추가하여 요청 전송 빈도를 낮춥니다`,
         `Начинается автоматическое объединение серий романов<br>Поскольку каждая серия может содержать несколько романов и изображений, загрузчик может отправить много запросов. Чтобы избежать срабатывания предупреждений Pixiv, загрузчик всегда добавляет интервалы времени во время объединения, чтобы снизить частоту отправки запросов`,
     ],
+    _合并小说时提示用户使用EPUB格式: [
+        `你当前选择的保存格式是 TXT，但是一些阅读器可能无法识别 TXT 里的章节标记，所以我推荐你在合并小说时选择 EPUB 格式`,
+        `你目前選擇的保存格式是 TXT，但是一些閱讀器可能無法識別 TXT 裡的章節標記，所以我推薦你在合併小說時選擇 EPUB 格式`,
+        `Your current selected save format is TXT, but some readers may not recognize the chapter markers in TXT, so I recommend choosing EPUB format when merging novels`,
+        `現在の保存形式は TXT ですが、一部のリーダーは TXT 内の章セクションマーカーを認識できない可能性があるため、小説をマージする際は EPUB 形式を選択することをおすすめします`,
+        `현재 선택한 저장 형식은 TXT이지만, 일부 독자는 TXT의 장 마커를 인식하지 못할 수 있으므로 소설을 병합할 때 EPUB 형식을 선택하는 것을 추천합니다`,
+        `Текущий выбранный формат сохранения — TXT, но некоторые читалки могут не распознавать маркеры глав в TXT, поэтому я рекомендую выбирать формат EPUB при объединении романов`,
+    ],
     _本次抓取一共合并了x个系列小说: [
         `本次抓取一共合并了 {} 个系列小说`,
         `本次抓取一共合併了 {} 個系列小說`,
@@ -32127,6 +32162,22 @@ If you want to use this feature, please note:
         `注意：シリーズが1つマージ中です。マージが完了するまで作業を続けます。それが必要なくなったら、このページを更新できます`,
         `주의: 시리즈 하나가 병합 중입니다. 병합이 완료될 때까지 작업을 계속합니다. 더 이상 필요하지 않으면 이 페이지를 새로고침할 수 있습니다`,
         `Примечание: Одна серия в процессе объединения, она продолжит работу до завершения объединения. Если он вам больше не нужен, вы можете обновить эту страницу`,
+    ],
+    _系列小说的命名规则: [
+        `系列小说的<span class="key">命名</span>规则`,
+        `系列小說的<span class="key">命名</span>規則`,
+        `Novel series <span class="key">naming</span> rule`,
+        `シリーズ小説の<span class="key">命名</span>ルール`,
+        `시리즈 소설 <span class="key">명명</span> 규칙`,
+        `Правило <span class="key">наименования</span> серий романов`,
+    ],
+    _提示点击下方的标记就可以把它复制到剪贴板: [
+        `提示：点击下方的标记就可以把它复制到剪贴板。`,
+        `提示：點擊下方的標記就可以把它複製到剪貼板。`,
+        `Tip: Click the marker below to copy it to the clipboard.`,
+        `ヒント：下のマーカーをクリックすると、それをクリップボードにコピーできます。`,
+        `팁: 아래 표시를 클릭하면 클립보드에 복사할 수 있습니다.`,
+        `Подсказка: Нажмите на маркер ниже, чтобы скопировать его в буфер обмена.`,
     ],
     _版本更新内容1820: [
         `📖 优化了保存小说时的内容
@@ -32242,13 +32293,18 @@ class OutputPanel {
             this.close();
         });
         // 复制输出内容
-        this.copyBtn.addEventListener('click', () => {
+        this.copyBtn.addEventListener('click', async () => {
             const text = this.outputContent.innerText.replaceAll('\n\n', '\n');
-            window.navigator.clipboard.writeText(text);
-            _Toast__WEBPACK_IMPORTED_MODULE_7__.toast.success(_Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_已复制到剪贴板'));
-            window.setTimeout(() => {
-                this.close();
-            }, 100);
+            const copied = await _utils_Utils__WEBPACK_IMPORTED_MODULE_3__.Utils.writeClipboardText(text);
+            if (copied) {
+                _Toast__WEBPACK_IMPORTED_MODULE_7__.toast.success(_Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_已复制到剪贴板'));
+                window.setTimeout(() => {
+                    this.close();
+                }, 100);
+            }
+            else {
+                _Toast__WEBPACK_IMPORTED_MODULE_7__.toast.error(_Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_写入剪贴板失败'));
+            }
         });
         window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_0__.EVT.list.output, (ev) => {
             this.output(ev.detail.data);
@@ -35469,6 +35525,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _setting_Options__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../setting/Options */ "./src/ts/setting/Options.ts");
 /* harmony import */ var _MsgBox__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../MsgBox */ "./src/ts/MsgBox.ts");
 /* harmony import */ var _utils_DateFormat__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../utils/DateFormat */ "./src/ts/utils/DateFormat.ts");
+/* harmony import */ var _Toast__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../Toast */ "./src/ts/Toast.ts");
+
 
 
 
@@ -35497,8 +35555,8 @@ class Form {
     bindEvents() {
         this.bindBeautifyInput();
         this.bindFunctionBtn();
-        this.showToggleTip();
-        this.showMsgTip();
+        this.toggleHelpArea();
+        this.showMsgWhenClick();
         // 输入框获得焦点时自动选择文本（命名规则的输入框例外）
         const centerInputs = this.form.querySelectorAll('input[type=text]');
         for (const el of centerInputs) {
@@ -35583,7 +35641,7 @@ class Form {
         }
     }
     /**点击一些按钮时，切换显示对应的帮助区域 */
-    showToggleTip() {
+    toggleHelpArea() {
         // 显示命名字段提示
         this.form
             .querySelector('#showFileNameTip')
@@ -35610,7 +35668,7 @@ class Form {
             .addEventListener('click', () => _utils_Utils__WEBPACK_IMPORTED_MODULE_7__.Utils.toggleEl(document.querySelector('#previewWorkShortcutTip')));
     }
     /**点击一些按钮时，通过 msgBox 显示帮助 */
-    showMsgTip() {
+    showMsgWhenClick() {
         // 把文件保存到用户上次选择的位置的说明
         this.form
             .querySelector('#showRememberTheLastSaveLocationTip')
@@ -35659,6 +35717,22 @@ class Form {
     }
     /**绑定功能按钮，点击按钮后会执行特定操作 */
     bindFunctionBtn() {
+        // 点击命名规则帮助区域里的标记名字时，复制到剪贴板
+        const allName = document.querySelectorAll('.namingTipArea .name');
+        allName.forEach((el) => {
+            el.addEventListener('click', async () => {
+                const text = el.textContent;
+                if (text) {
+                    const copied = await _utils_Utils__WEBPACK_IMPORTED_MODULE_7__.Utils.writeClipboardText(text);
+                    if (copied) {
+                        _Toast__WEBPACK_IMPORTED_MODULE_12__.toast.success(_Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_已复制'));
+                    }
+                    else {
+                        _Toast__WEBPACK_IMPORTED_MODULE_12__.toast.error(_Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_复制失败'));
+                    }
+                }
+            });
+        });
         // 投稿时间的输入框后面有 now 按钮，点击之后会把对应的输入框的值设置为现在
         const setNowBtns = this.form.querySelectorAll('button[role="setDate"]');
         for (const btn of setNowBtns) {
@@ -35757,7 +35831,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _Wiki__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Wiki */ "./src/ts/setting/Wiki.ts");
 
 
-// 设置项编号从 0 开始，现在最大是 90
+// 设置项编号从 0 开始，现在最大是 91
 const formHtml = `
 <form class="settingForm">
   <div class="tabsContnet">
@@ -36111,7 +36185,7 @@ const formHtml = `
       <slot data-name="saveNamingRule"></slot>
       <button class="showFileNameTip textButton" id="showFileNameTip" type="button" data-xztext="_提示"></button>
     </p>
-    <p class="fileNameTip tip" id="fileNameTip">
+    <p class="fileNameTip tip namingTipArea" id="fileNameTip">
       <span data-xztext="_设置文件夹名的提示"></span>
       <span>{user}<span class="key">/</span>{id}</span>
       <br>
@@ -36119,85 +36193,87 @@ const formHtml = `
       <br>
       * <span data-xztext="_有些标记并不总是可用的提醒"></span>
       <br>
-      <span class="blue">{id}</span>
+      <span data-xztext="_提示点击下方的标记就可以把它复制到剪贴板"></span>
+      <br>
+      <span class="blue name">{id}</span>
       <span data-xztext="_命名标记id"></span>
       <br>
-      <span class="blue">{user}</span>
+      <span class="blue name">{user}</span>
       <span data-xztext="_命名标记user"></span>
       <br>
-      <span class="blue">{user_id}</span>
+      <span class="blue name">{user_id}</span>
       <span data-xztext="_用户id"></span>
       <br>
-      <span class="blue">{title}</span>
+      <span class="blue name">{title}</span>
       <span data-xztext="_命名标记title"></span>
       <br>
-      <span class="blue">{tags}</span>
+      <span class="blue name">{tags}</span>
       <span data-xztext="_命名标记tags"></span>
       <br>
-      <span class="blue">{tags_translate}</span>
+      <span class="blue name">{tags_translate}</span>
       <span data-xztext="_命名标记tags_trans"></span>
       <br>
-      <span class="blue">{tags_transl_only}</span>
+      <span class="blue name">{tags_transl_only}</span>
       <span data-xztext="_命名标记tags_transl_only"></span>
       <br>
-      <span class="blue">{page_title}</span>
+      <span class="blue name">{page_title}</span>
       <span data-xztext="_文件夹标记PTitle"></span>
       <br>
-      * <span class="blue">{page_tag}</span>
+      * <span class="blue name">{page_tag}</span>
       <span data-xztext="_文件夹标记PTag"></span>
       <br>
-      <span class="blue">{type}</span>
+      <span class="blue name">{type}</span>
       <span data-xztext="_命名标记type"></span>
       <br>
-      * <span class="blue">{AI}</span>
+      * <span class="blue name">{AI}</span>
       <span data-xztext="_命名标记AI"></span>
       <br>
-      <span class="blue">{like}</span>
+      <span class="blue name">{like}</span>
       <span data-xztext="_命名标记like"></span>
       <br>
-      <span class="blue">{bmk}</span>
+      <span class="blue name">{bmk}</span>
       <span data-xztext="_命名标记bmk"></span>
       <br>
-      <span class="blue">{bmk_1000}</span>
+      <span class="blue name">{bmk_1000}</span>
       <span data-xztext="_命名标记bmk_1000"></span>
       <br>
-      <span class="blue">{bmk_id}</span>
+      <span class="blue name">{bmk_id}</span>
       <span data-xztext="_命名标记bmk_id"></span>
       <br>
-      <span class="blue">{view}</span>
+      <span class="blue name">{view}</span>
       <span data-xztext="_命名标记view"></span>
       <br>
-      * <span class="blue">{rank}</span>
+      * <span class="blue name">{rank}</span>
       <span data-xztext="_命名标记rank"></span>
       <br>
-      <span class="blue">{date}</span>
+      <span class="blue name">{date}</span>
       <span data-xztext="_命名标记date"></span>
       <br>
-      <span class="blue">{upload_date}</span>
+      <span class="blue name">{upload_date}</span>
       <span data-xztext="_命名标记upload_date"></span>
       <br>
-      <span class="blue">{task_date}</span>
+      <span class="blue name">{task_date}</span>
       <span data-xztext="_命名标记taskDate"></span>
       <br>
-      <span class="blue">{px}</span>
+      <span class="blue name">{px}</span>
       <span data-xztext="_命名标记px"></span>
       <br>
-      * <span class="blue">{series_title}</span>
+      * <span class="blue name">{series_title}</span>
       <span data-xztext="_命名标记seriesTitle"></span>
       <span data-xztext="_当作品属于一个系列时可用"></span>
       <br>
-      * <span class="blue">{series_order}</span>
+      * <span class="blue name">{series_order}</span>
       <span data-xztext="_命名标记seriesOrder"></span>
       <span data-xztext="_当作品属于一个系列时可用"></span>
       <br>
-      * <span class="blue">{series_id}</span>
+      * <span class="blue name">{series_id}</span>
       <span data-xztext="_命名标记seriesId"></span>
       <span data-xztext="_当作品属于一个系列时可用"></span>
       <br>
-      <span class="blue">{id_num}</span>
+      <span class="blue name">{id_num}</span>
       <span data-xztext="_命名标记id_num"></span>
       <br>
-      <span class="blue">{p_num}</span>
+      <span class="blue name">{p_num}</span>
       <span data-xztext="_命名标记p_num"></span>
     </p>
     <p class="option" data-no="50">
@@ -57388,6 +57464,16 @@ class Utils {
             };
             reader.readAsDataURL(blob);
         });
+    }
+    static async writeClipboardText(text) {
+        try {
+            await window.navigator.clipboard.writeText(text);
+            return true;
+        }
+        catch (error) {
+            console.error('Writing to clipboard failed', error.message);
+            return false;
+        }
     }
 }
 

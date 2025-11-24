@@ -1,7 +1,7 @@
 import { Config } from '../Config'
 import { wiki } from './Wiki'
 
-// 设置项编号从 0 开始，现在最大是 90
+// 设置项编号从 0 开始，现在最大是 91
 export const formHtml = `
 <form class="settingForm">
   <div class="tabsContnet">
@@ -355,7 +355,7 @@ export const formHtml = `
       <slot data-name="saveNamingRule"></slot>
       <button class="showFileNameTip textButton" id="showFileNameTip" type="button" data-xztext="_提示"></button>
     </p>
-    <p class="fileNameTip tip" id="fileNameTip">
+    <p class="fileNameTip tip namingTipArea" id="fileNameTip">
       <span data-xztext="_设置文件夹名的提示"></span>
       <span>{user}<span class="key">/</span>{id}</span>
       <br>
@@ -363,85 +363,87 @@ export const formHtml = `
       <br>
       * <span data-xztext="_有些标记并不总是可用的提醒"></span>
       <br>
-      <span class="blue">{id}</span>
+      <span data-xztext="_提示点击下方的标记就可以把它复制到剪贴板"></span>
+      <br>
+      <span class="blue name">{id}</span>
       <span data-xztext="_命名标记id"></span>
       <br>
-      <span class="blue">{user}</span>
+      <span class="blue name">{user}</span>
       <span data-xztext="_命名标记user"></span>
       <br>
-      <span class="blue">{user_id}</span>
+      <span class="blue name">{user_id}</span>
       <span data-xztext="_用户id"></span>
       <br>
-      <span class="blue">{title}</span>
+      <span class="blue name">{title}</span>
       <span data-xztext="_命名标记title"></span>
       <br>
-      <span class="blue">{tags}</span>
+      <span class="blue name">{tags}</span>
       <span data-xztext="_命名标记tags"></span>
       <br>
-      <span class="blue">{tags_translate}</span>
+      <span class="blue name">{tags_translate}</span>
       <span data-xztext="_命名标记tags_trans"></span>
       <br>
-      <span class="blue">{tags_transl_only}</span>
+      <span class="blue name">{tags_transl_only}</span>
       <span data-xztext="_命名标记tags_transl_only"></span>
       <br>
-      <span class="blue">{page_title}</span>
+      <span class="blue name">{page_title}</span>
       <span data-xztext="_文件夹标记PTitle"></span>
       <br>
-      * <span class="blue">{page_tag}</span>
+      * <span class="blue name">{page_tag}</span>
       <span data-xztext="_文件夹标记PTag"></span>
       <br>
-      <span class="blue">{type}</span>
+      <span class="blue name">{type}</span>
       <span data-xztext="_命名标记type"></span>
       <br>
-      * <span class="blue">{AI}</span>
+      * <span class="blue name">{AI}</span>
       <span data-xztext="_命名标记AI"></span>
       <br>
-      <span class="blue">{like}</span>
+      <span class="blue name">{like}</span>
       <span data-xztext="_命名标记like"></span>
       <br>
-      <span class="blue">{bmk}</span>
+      <span class="blue name">{bmk}</span>
       <span data-xztext="_命名标记bmk"></span>
       <br>
-      <span class="blue">{bmk_1000}</span>
+      <span class="blue name">{bmk_1000}</span>
       <span data-xztext="_命名标记bmk_1000"></span>
       <br>
-      <span class="blue">{bmk_id}</span>
+      <span class="blue name">{bmk_id}</span>
       <span data-xztext="_命名标记bmk_id"></span>
       <br>
-      <span class="blue">{view}</span>
+      <span class="blue name">{view}</span>
       <span data-xztext="_命名标记view"></span>
       <br>
-      * <span class="blue">{rank}</span>
+      * <span class="blue name">{rank}</span>
       <span data-xztext="_命名标记rank"></span>
       <br>
-      <span class="blue">{date}</span>
+      <span class="blue name">{date}</span>
       <span data-xztext="_命名标记date"></span>
       <br>
-      <span class="blue">{upload_date}</span>
+      <span class="blue name">{upload_date}</span>
       <span data-xztext="_命名标记upload_date"></span>
       <br>
-      <span class="blue">{task_date}</span>
+      <span class="blue name">{task_date}</span>
       <span data-xztext="_命名标记taskDate"></span>
       <br>
-      <span class="blue">{px}</span>
+      <span class="blue name">{px}</span>
       <span data-xztext="_命名标记px"></span>
       <br>
-      * <span class="blue">{series_title}</span>
+      * <span class="blue name">{series_title}</span>
       <span data-xztext="_命名标记seriesTitle"></span>
       <span data-xztext="_当作品属于一个系列时可用"></span>
       <br>
-      * <span class="blue">{series_order}</span>
+      * <span class="blue name">{series_order}</span>
       <span data-xztext="_命名标记seriesOrder"></span>
       <span data-xztext="_当作品属于一个系列时可用"></span>
       <br>
-      * <span class="blue">{series_id}</span>
+      * <span class="blue name">{series_id}</span>
       <span data-xztext="_命名标记seriesId"></span>
       <span data-xztext="_当作品属于一个系列时可用"></span>
       <br>
-      <span class="blue">{id_num}</span>
+      <span class="blue name">{id_num}</span>
       <span data-xztext="_命名标记id_num"></span>
       <br>
-      <span class="blue">{p_num}</span>
+      <span class="blue name">{p_num}</span>
       <span data-xztext="_命名标记p_num"></span>
     </p>
     <p class="option" data-no="50">

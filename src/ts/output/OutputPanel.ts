@@ -54,14 +54,17 @@ class OutputPanel {
     })
 
     // 复制输出内容
-    this.copyBtn.addEventListener('click', () => {
+    this.copyBtn.addEventListener('click', async () => {
       const text = this.outputContent.innerText.replaceAll('\n\n', '\n')
-      window.navigator.clipboard.writeText(text)
-      toast.success(lang.transl('_已复制到剪贴板'))
-
-      window.setTimeout(() => {
-        this.close()
-      }, 100)
+      const copied = await Utils.writeClipboardText(text)
+      if (copied) {
+        toast.success(lang.transl('_已复制到剪贴板'))
+        window.setTimeout(() => {
+          this.close()
+        }, 100)
+      } else {
+        toast.error(lang.transl('_写入剪贴板失败'))
+      }
     })
 
     window.addEventListener(EVT.list.output, (ev: CustomEventInit) => {
