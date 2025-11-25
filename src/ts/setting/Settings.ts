@@ -105,7 +105,7 @@ interface XzSetting {
   downBlackWhiteImg: boolean
   downNotBookmarked: boolean
   downBookmarked: boolean
-  ugoiraSaveAs: 'webm' | 'gif' | 'zip' | 'png'
+  ugoiraSaveAs: 'webm' | 'gif' | 'zip' | 'apng'
   convertUgoiraThread: number
   needTagSwitch: boolean
   notNeedTagSwitch: boolean
@@ -154,6 +154,7 @@ interface XzSetting {
   fileNameLengthLimitSwitch: boolean
   tagsSeparator: ',' | '#' | '^' | '&' | '_'
   fileNameLengthLimit: number
+  /** 图片尺寸。original 原图, regular 普通, small 小图, thumb 方形缩略图 */
   imageSize: 'original' | 'regular' | 'small' | 'thumb'
   dateFormat: string
   userSetLang: 'zh-cn' | 'zh-tw' | 'ja' | 'en' | 'ko' | 'ru' | 'auto'

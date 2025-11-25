@@ -286,7 +286,7 @@ class Download {
         // 状态码正常
         progressBar.errorColor(this.progressBarIndex, false)
         // 需要转换动图的情况
-        const convertExt = ['webm', 'gif', 'png']
+        const convertExt = ['webm', 'gif', 'apng']
         const ext = settings.ugoiraSaveAs
         if (
           convertExt.includes(ext) &&
@@ -311,7 +311,7 @@ class Download {
               )
             }
 
-            if (ext === 'png') {
+            if (ext === 'apng') {
               file = await convertUgoira.apng(
                 file,
                 arg.result.ugoiraInfo,

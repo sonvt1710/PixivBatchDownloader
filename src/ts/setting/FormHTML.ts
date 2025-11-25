@@ -795,7 +795,7 @@ export const formHtml = `
       <input type="radio" name="ugoiraSaveAs" id="ugoiraSaveAs3" class="need_beautify radio" value="gif">
       <span class="beautify_radio" tabindex="0"></span>
       <label for="ugoiraSaveAs3" data-xztext="_gif"></label>
-      <input type="radio" name="ugoiraSaveAs" id="ugoiraSaveAs4" class="need_beautify radio" value="png">
+      <input type="radio" name="ugoiraSaveAs" id="ugoiraSaveAs4" class="need_beautify radio" value="apng">
       <span class="beautify_radio" tabindex="0"></span>
       <label for="ugoiraSaveAs4" class="has_tip" data-xztip="_无损" data-xztext="_apng"></label>
       <input type="radio" name="ugoiraSaveAs" id="ugoiraSaveAs2" class="need_beautify radio" value="zip">

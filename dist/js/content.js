@@ -3603,7 +3603,7 @@ __webpack_require__.r(__webpack_exports__);
 // 生成文件名
 class FileName {
     // 下载器所有的动图格式后缀名
-    ugoiraExt = ['zip', 'webm', 'gif', 'png'];
+    ugoiraExt = ['zip', 'webm', 'gif', 'apng'];
     addStr = '[downloader_add]';
     /**传入一个抓取结果，生成其文件名 */
     createFileName(data) {
@@ -3874,12 +3874,14 @@ class FileName {
         // 4 文件夹部分和文件名已经全部生成完毕，处理一些边界情况
         result = this.handleEdgeCases(result);
         // 5 生成后缀名
-        // 如果是动图，那么此时根据用户设置的动图保存格式，更新其后缀名
-        if (this.ugoiraExt.includes(data.ext) &&
-            data.ugoiraInfo &&
-            _setting_Settings__WEBPACK_IMPORTED_MODULE_0__.settings.imageSize !== 'thumb') {
-            // 当下载图片的方形缩略图时，不修改其后缀名，因为此时下载的是作品的静态缩略图，不是动图
-            data.ext = _setting_Settings__WEBPACK_IMPORTED_MODULE_0__.settings.ugoiraSaveAs;
+        // 如果是动图，那么此时
+        if (this.ugoiraExt.includes(data.ext) && data.ugoiraInfo) {
+            // 如果需要转换动图，则把后缀名设置为用户选择的动图保存格式
+            if (_setting_Settings__WEBPACK_IMPORTED_MODULE_0__.settings.imageSize !== 'thumb') {
+                data.ext = _setting_Settings__WEBPACK_IMPORTED_MODULE_0__.settings.ugoiraSaveAs;
+            }
+            // 下载动图时，如果选择的尺寸是“方形缩略图”则不修改其后缀名，因为此时下载的是静态缩略图。
+            // 其他三种尺寸都是动图。“普通”和“小图”也是动图，只是尺寸比“原图”小。
         }
         // 如果是小说，那么此时根据用户设置的动图保存格式，更新其后缀名
         if (data.type === 3) {
@@ -19168,7 +19170,7 @@ class Download {
                 // 状态码正常
                 _ProgressBar__WEBPACK_IMPORTED_MODULE_6__.progressBar.errorColor(this.progressBarIndex, false);
                 // 需要转换动图的情况
-                const convertExt = ['webm', 'gif', 'png'];
+                const convertExt = ['webm', 'gif', 'apng'];
                 const ext = _setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAs;
                 if (convertExt.includes(ext) &&
                     arg.result.ugoiraInfo &&
@@ -19181,7 +19183,7 @@ class Download {
                         if (ext === 'gif') {
                             file = await _ConvertUgoira_ConvertUgoira__WEBPACK_IMPORTED_MODULE_5__.convertUgoira.gif(file, arg.result.ugoiraInfo, arg.result.idNum);
                         }
-                        if (ext === 'png') {
+                        if (ext === 'apng') {
                             file = await _ConvertUgoira_ConvertUgoira__WEBPACK_IMPORTED_MODULE_5__.convertUgoira.apng(file, arg.result.ugoiraInfo, arg.result.idNum);
                         }
                     }
@@ -35399,6 +35401,9 @@ class ConvertOldSettings {
             '3': 'zh-tw',
             '4': 'ko',
         },
+        ugoiraSaveAs: {
+            png: 'apng',
+        },
     };
     // 传递需要转换的设置的键值
     convert(key, value) {
@@ -37052,7 +37057,7 @@ const formHtml = `
       <input type="radio" name="ugoiraSaveAs" id="ugoiraSaveAs3" class="need_beautify radio" value="gif">
       <span class="beautify_radio" tabindex="0"></span>
       <label for="ugoiraSaveAs3" data-xztext="_gif"></label>
-      <input type="radio" name="ugoiraSaveAs" id="ugoiraSaveAs4" class="need_beautify radio" value="png">
+      <input type="radio" name="ugoiraSaveAs" id="ugoiraSaveAs4" class="need_beautify radio" value="apng">
       <span class="beautify_radio" tabindex="0"></span>
       <label for="ugoiraSaveAs4" class="has_tip" data-xztip="_无损" data-xztext="_apng"></label>
       <input type="radio" name="ugoiraSaveAs" id="ugoiraSaveAs2" class="need_beautify radio" value="zip">

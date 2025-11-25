@@ -11,7 +11,7 @@ import { Tools } from './Tools'
 // 生成文件名
 class FileName {
   // 下载器所有的动图格式后缀名
-  private readonly ugoiraExt = ['zip', 'webm', 'gif', 'png']
+  private readonly ugoiraExt = ['zip', 'webm', 'gif', 'apng']
   private readonly addStr = '[downloader_add]'
 
   /**传入一个抓取结果，生成其文件名 */
@@ -309,14 +309,14 @@ class FileName {
     result = this.handleEdgeCases(result)
 
     // 5 生成后缀名
-    // 如果是动图，那么此时根据用户设置的动图保存格式，更新其后缀名
-    if (
-      this.ugoiraExt.includes(data.ext) &&
-      data.ugoiraInfo &&
-      settings.imageSize !== 'thumb'
-    ) {
-      // 当下载图片的方形缩略图时，不修改其后缀名，因为此时下载的是作品的静态缩略图，不是动图
-      data.ext = settings.ugoiraSaveAs
+    // 如果是动图，那么此时
+    if (this.ugoiraExt.includes(data.ext) && data.ugoiraInfo) {
+      // 如果需要转换动图，则把后缀名设置为用户选择的动图保存格式
+      if (settings.imageSize !== 'thumb') {
+        data.ext = settings.ugoiraSaveAs
+      }
+      // 下载动图时，如果选择的尺寸是“方形缩略图”则不修改其后缀名，因为此时下载的是静态缩略图。
+      // 其他三种尺寸都是动图。“普通”和“小图”也是动图，只是尺寸比“原图”小。
     }
     // 如果是小说，那么此时根据用户设置的动图保存格式，更新其后缀名
     if (data.type === 3) {
