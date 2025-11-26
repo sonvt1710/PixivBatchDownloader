@@ -9893,15 +9893,15 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-// 显示最近更新内容
+// 显示版本更新说明
 class ShowWhatIsNew {
     constructor() {
         this.bindEvents();
     }
-    flag = '18.1.0';
+    flag = '18.2.0';
     bindEvents() {
         window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_4__.EVT.list.settingInitialized, () => {
-            // 消息文本要写在 settingInitialized 事件回调里，否则它们可能会被翻译成错误的语言
+            // 在 settingInitialized 事件触发后生成消息，如果时间较早，可能会被翻译成错误的语言
             let msg = `
       <span>${_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_扩展程序升到x版本', this.flag)}</span>
       <br>
@@ -9909,38 +9909,24 @@ class ShowWhatIsNew {
       <span>${_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_版本更新内容1820')}</span>
       <br>
       <br>
-      <span>🐞 ${_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_修复bug')}</span>
+      <span>${_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_修复bug')}</span>
       <br>
       <br>
-      <span>😊 ${_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_优化用户体验')}</span>
+      <span>${_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_优化用户体验')}</span>
       `;
             if (_Language__WEBPACK_IMPORTED_MODULE_0__.lang.type === 'zh-cn') {
-                msg += `<span>${_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_QQ修复了粘贴问题的提醒')}</span>`;
+                msg += `<br>
+      <br>
+      <span>${_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_QQ修复了粘贴问题的提醒')}</span>`;
             }
             // <strong><span>✨ ${lang.transl('_新增设置项')}:</span></strong>
             // <strong><span>✨ ${lang.transl('_新增功能')}:</span></strong>
-            // <strong><span>⚙️ ${lang.transl('_行为变更')}:</span></strong>
-            // <span>🗑${lang.transl('_移除设置项')}</span>
             // <span class="blue">${lang.transl('_下载间隔')}</span>
-            // ${lang.transl(
-            //   '_你可以在更多选项卡的xx分类里找到它',
-            //   lang.transl('_下载')
-            // )}
-            // <br>
-            // <br>
-            // ${lang.transl(
-            //   '_你可以在xx选项卡里找到它',
-            //   lang.transl('_下载')
-            // )}
-            // <br>
-            // <br>
             // <span>${lang.transl('_该功能默认启用')}</span>
             // <span>${lang.transl('_默认未启用')}</span>
-            // <span>🐞 ${lang.transl('_修复bug')}</span>
-            // <span>🐞 ${lang.transl('_修复了显示更大的缩略图的功能异常的问题')}</span>
-            // <span>😊 ${lang.transl('_优化用户体验')}</span>
-            // <span>😊 ${lang.transl('_优化性能和用户体验')}</span>
-            // 在更新说明的下方显示赞助提示
+            // <span>${lang.transl('_修复bug')}</span>
+            // <span>${lang.transl('_优化用户体验')}</span>
+            // 在更新说明的底部添加赞助提示
             msg += `
       <br>
       <br>
@@ -30170,29 +30156,21 @@ Novel folder name: Novel`,
         '성능과 사용자 경험을 최적화합니다.',
         'Оптимизация производительности и пользовательского опыта',
     ],
-    _优化用户体验: [
-        `优化用户体验`,
-        `優化使用者體驗`,
-        `Optimize User Experience`,
-        `ユーザーエクスペリエンスの最適化`,
-        `사용자 경험 최적화`,
-        `Оптимизация пользовательского опыта`,
-    ],
     _修复bug: [
-        '修复 bug',
-        '修復 bug',
-        'fix bugs',
-        'バグを修正',
-        '버그 수정',
-        'Баг фикс',
+        `<strong>🐞 修复bug</strong>`,
+        `<strong>🐞 修復bug</strong>`,
+        `<strong>🐞 Bug Fix</strong>`,
+        `<strong>🐞 バグ修正</strong>`,
+        `<strong>🐞 버그 수정</strong>`,
+        `<strong>🐞 Исправление ошибок</strong>`,
     ],
-    _修复已知问题: [
-        '修复已知问题。',
-        '修復已知問題。',
-        'fix known issues.',
-        '既知の問題を修正する。',
-        '알려진 문제 수정。',
-        'исправить известные проблемы。',
+    _优化用户体验: [
+        `<strong>😊 优化用户体验</strong>`,
+        `<strong>😊 優化用戶體驗</strong>`,
+        `<strong>😊 Optimized User Experience</strong>`,
+        `<strong>😊 ユーザーエクスペリエンスの最適化</strong>`,
+        `<strong>😊 사용자 경험 최적화</strong>`,
+        `<strong>😊 Оптимизация пользовательского опыта</strong>`,
     ],
     _不支持的浏览器: [
         '你的浏览器不能正常使用这个扩展程序，主要原因可能是浏览器内核版本太低，或者存在兼容性问题。<br>建议您更换成最新版本的 Chrome 或 Edge 浏览器。',
@@ -32225,14 +32203,6 @@ If you want to use this feature, please note:
         `이것은 데뷔 작품이 아닙니다`,
         `Это не дебютная работа`,
     ],
-    _QQ修复了粘贴问题的提醒: [
-        `对使用下载器的“复制功能”的用户的提醒：<br> QQ 之前的版本存在 Bug，无法粘贴下载器复制的图文混合内容（text/html）。最近（11月5日）QQ 的新版本修复了此问题，请及时更新。`,
-        `對使用下載器的「複製功能」的用戶的提醒：<br> QQ 之前的版本存在 Bug，無法貼上下載器複製的圖文混合內容（text/html）。最近（11月5日）QQ 的新版本修復了此問題，請及時更新。`,
-        `Reminder for users using the downloader's "copy function":<br> Previous versions of QQ had a bug that prevented pasting the mixed image-text content (text/html) copied by the downloader. The latest version of QQ (November 5th) has fixed this issue, please update promptly.`,
-        `ダウンロードツールの「コピー機能」を使用するユーザーへのリマインダー：<br> QQ の以前のバージョンにはバグがあり、ダウンロードツールでコピーした画像とテキストの混合コンテンツ（text/html）を貼り付けできませんでした。最近（11月5日）の QQ の新バージョンでこの問題が修正されました。速やかに更新してください。`,
-        `다운로더의 "복사 기능"을 사용하는 사용자에게 알림:<br> QQ 이전 버전에는 버그가 있어 다운로더가 복사한 이미지-텍스트 혼합 콘텐츠(text/html)를 붙여넣을 수 없습니다. 최근(11월 5일) QQ 새 버전에서 이 문제가 수정되었습니다. 즉시 업데이트하세요.`,
-        `Напоминание для пользователей, использующих функцию "копирования" загрузчика:<br> В предыдущих версиях QQ была ошибка, из-за которой нельзя было вставить смешанный контент с изображениями и текстом (text/html), скопированный загрузчиком. В последней версии QQ (5 ноября) эта проблема исправлена, пожалуйста, обновите timely.`,
-    ],
     _有同类任务正在执行请等待之前的任务完成: [
         `有同类任务正在执行，请等待之前的任务完成。`,
         `有同類任務正在執行，請等待之前的任務完成。`,
@@ -32412,7 +32382,7 @@ If you want to use this feature, please note:
     _合并系列小说时的命名规则: [
         `合并系列小说时的<span class="key">命名</span>规则`,
         `合併系列小說時的<span class="key">命名</span>規則`,
-        `Naming rule when merging novel series`,
+        `<span class="key">Naming</span> rule when merging novel series`,
         `シリーズ小説をマージする際の<span class="key">命名</span>ルール`,
         `시리즈 소설 병합 시 <span class="key">명명</span> 규칙`,
         `Правило <span class="key">наименования</span> при объединении серий романов`,
@@ -32595,31 +32565,207 @@ To prevent duplicate filenames, it is recommended to always add {series_id}.`,
         `현재 페이지의 제목`,
         `Заголовок текущей страницы`,
     ],
+    _QQ修复了粘贴问题的提醒: [
+        `📋 对使用下载器的“复制功能”的用户的提醒：<br> QQ 之前的版本存在 Bug，无法粘贴下载器复制的图文混合内容（text/html）。最近（11月5日）QQ 的新版本修复了此问题，请及时更新。`,
+        `📋 對使用下載器的「複製功能」的用戶的提醒：<br> QQ 之前的版本存在 Bug，無法貼上下載器複製的圖文混合內容（text/html）。最近（11月5日）QQ 的新版本修復了此問題，請及時更新。`,
+        `📋 Reminder for users using the downloader's "copy function":<br> Previous versions of QQ had a bug that prevented pasting the mixed image-text content (text/html) copied by the downloader. The latest version of QQ (November 5th) has fixed this issue, please update promptly.`,
+        `📋 ダウンロードツールの「コピー機能」を使用するユーザーへのリマインダー：<br> QQ の以前のバージョンにはバグがあり、ダウンロードツールでコピーした画像とテキストの混合コンテンツ（text/html）を貼り付けできませんでした。最近（11月5日）の QQ の新バージョンでこの問題が修正されました。速やかに更新してください。`,
+        `📋 다운로더의 "복사 기능"을 사용하는 사용자에게 알림:<br> QQ 이전 버전에는 버그가 있어 다운로더가 복사한 이미지-텍스트 혼합 콘텐츠(text/html)를 붙여넣을 수 없습니다. 최근(11월 5일) QQ 새 버전에서 이 문제가 수정되었습니다. 즉시 업데이트하세요.`,
+        `📋 Напоминание для пользователей, использующих функцию "копирования" загрузчика:<br> В предыдущих версиях QQ была ошибка, из-за которой нельзя было вставить смешанный контент с изображениями и текстом (text/html), скопированный загрузчиком. В последней версии QQ (5 ноября) эта проблема исправлена, пожалуйста, обновите timely.`,
+    ],
     _版本更新内容1820: [
-        `📖 优化了保存小说时的内容
-<br><br>
-✨ 作品页面里的快速收藏按钮 (✩) 添加了取消收藏的功能<br>如果该作品已经被收藏，点击该按钮 (✩) 可以取消收藏。
-<br><br>`,
-        `📖 優化了保存小說時的內容
-<br><br>
-✨ 作品頁面裡的快速收藏按鈕 (✩) 添加了取消收藏的功能<br>如果該作品已經被收藏，點擊該按鈕 (✩) 可以取消收藏。
-<br><br>`,
-        `📖 Optimized the content when saving novels
-<br><br>
-✨ Added unbookmark function to the quick bookmark button (✩) on the work page<br>If the work is already bookmarked, clicking this button (✩) can unbookmark it.
-<br><br>`,
-        `📖 小説保存時のコンテンツを最適化
-<br><br>
-✨ 作品ページのクイックブックマークボタン (✩) にブックマーク解除機能を追加<br>その作品がすでにブックマークされている場合、このボタン (✩) をクリックしてブックマークを解除できます。
-<br><br>`,
-        `📖 소설 저장 시 내용 최적화
-<br><br>
-✨ 작품 페이지의 빠른 북마크 버튼 (✩) 에 북마크 취소 기능 추가<br>해당 작품이 이미 북마크된 경우, 이 버튼 (✩) 을 클릭하여 북마크를 취소할 수 있습니다.
-<br><br>`,
-        `📖 Оптимизировано содержимое при сохранении романов
-<br><br>
-✨ Добавлена функция отмены закладки для быстрой кнопки закладки (✩) на странице работы<br>Если работа уже добавлена в закладки, нажатие на эту кнопку (✩) позволит удалить её из закладок.
-<br><br>`,
+        `<strong>📚 新功能：自动合并系列小说</strong>
+<br>
+抓取作品时，如果一个小说属于某个系列，下载器可以自动抓取这个系列里的所有小说并且合并。
+<br>
+这个功能位于“更多”-“下载”分类里，默认未启用，你可以在有需要时启用。
+<br>
+<br>
+<strong>✨ 新增设置：合并系列小说时的命名规则</strong>
+<br>
+你可以设置合并小说时生成的文件的名字。
+<br>
+这个设置位于“更多”-“下载”分类里。
+<br>
+<br>
+<strong>✨ 新增命名标记 {age} {age_r}</strong>
+<br>
+<span class="blue">{age}</span> 作品的年龄限制，分为：<span class="blue">All Ages</span>、<span class="blue">R-18</span>、<span class="blue">R-18G</span>
+<br>
+<span class="blue">{age_r}</span> 仅当作品为限制级时，输出它的年龄限制，分为：<span class="blue">R-18</span>、<span class="blue">R-18G</span>
+<br>
+<br>
+<strong>📖 优化了保存小说时的内容</strong>
+<br>
+<br>
+<strong>🔧 动图保存为 APNG 格式时，文件的扩展名从 png 改成 apng</strong>
+<br>
+这样可以让静态图片和动图区别更明显，也有助于一些软件识别 apng 图片。
+<br>
+<br>
+<strong>🔧 作品页面里的快速收藏按钮 (✩) 可以取消收藏了</strong>
+<br>
+如果该作品已经被收藏，点击该按钮 (✩) 可以取消收藏。`,
+        `<strong>📚 新功能：自動合併系列小說</strong>
+<br>
+抓取作品時，如果一個小說屬於某個系列，下載器可以自動抓取這個系列裡的所有小說並且合併。
+<br>
+這個功能位於「更多」-「下載」分類裡，預設未啟用，你可以在有需要時啟用。
+<br>
+<br>
+<strong>✨ 新增設置：合併系列小說時的命名規則</strong>
+<br>
+你可以設置合併小說時生成的檔案的名字。
+<br>
+這個設置位於「更多」-「下載」分類裡。
+<br>
+<br>
+<strong>✨ 新增命名標記 {age} {age_r}</strong>
+<br>
+<span class="blue">{age}</span> 作品的年齡限制，分為：<span class="blue">All Ages</span>、<span class="blue">R-18</span>、<span class="blue">R-18G</span>
+<br>
+<span class="blue">{age_r}</span> 僅當作品為限制級時，輸出它的年齡限制，分為：<span class="blue">R-18</span>、<span class="blue">R-18G</span>
+<br>
+<br>
+<strong>📖 優化了保存小說時的內容</strong>
+<br>
+<br>
+<strong>🔧 動圖保存為 APNG 格式時，檔案的擴展名從 png 改成 apng</strong>
+<br>
+這樣可以讓靜態圖片和動圖區別更明顯，也有助於一些軟件識別 apng 圖片。
+<br>
+<br>
+<strong>🔧 作品頁面裡的快速收藏按鈕 (✩) 可以取消收藏了</strong>
+<br>
+如果該作品已經被收藏，點擊該按鈕 (✩) 可以取消收藏。`,
+        `<strong>📚 New Feature: Auto-Merge Novel Series</strong>
+<br>
+When crawling works, if a novel belongs to a certain series, the downloader can automatically crawl all novels in that series and merge them.
+<br>
+This feature is located in the "More" - "Download" category, disabled by default, and you can enable it when needed.
+<br>
+<br>
+<strong>✨ New Setting: Naming Rule When Merging Novel Series</strong>
+<br>
+You can set the name of the file generated when merging novels.
+<br>
+This setting is located in the "More" - "Download" category.
+<br>
+<br>
+<strong>✨ New Naming Tags {age} {age_r}</strong>
+<br>
+<span class="blue">{age}</span> The age restriction of the work, divided into: <span class="blue">All Ages</span>, <span class="blue">R-18</span>, <span class="blue">R-18G</span>
+<br>
+<span class="blue">{age_r}</span> Output its age restriction only when the work is restricted, divided into: <span class="blue">R-18</span>, <span class="blue">R-18G</span>
+<br>
+<br>
+<strong>📖 Optimized Content When Saving Novels</strong>
+<br>
+<br>
+<strong>🔧 When Saving Ugoira as APNG Format, File Extension Changed from png to apng</strong>
+<br>
+This makes the distinction between static images and Ugoira more obvious and helps some software recognize apng images.
+<br>
+<br>
+<strong>🔧 Quick Bookmark Button (✩) on Work Pages Can Now Unbookmark</strong>
+<br>
+If the work has already been bookmarked, clicking this button (✩) can unbookmark it.`,
+        `<strong>📚 新機能：シリーズ小説の自動マージ</strong>
+<br>
+作品をクロールする際、1つの小説が特定のシリーズに属する場合、ダウンロードツールはこのシリーズ内のすべての小説を自動的にクロールしてマージできます。
+<br>
+この機能は「その他」-「ダウンロード」カテゴリにあり、デフォルトで無効になっています。必要に応じて有効にできます。
+<br>
+<br>
+<strong>✨ 新設定：シリーズ小説をマージする際の命名ルール</strong>
+<br>
+小説をマージする際に生成されるファイルの名前を設定できます。
+<br>
+この設定は「その他」-「ダウンロード」カテゴリにあります。
+<br>
+<br>
+<strong>✨ 新命名タグ {age} {age_r}</strong>
+<br>
+<span class="blue">{age}</span> 作品の年齢制限：<span class="blue">All Ages</span>、<span class="blue">R-18</span>、<span class="blue">R-18G</span> に分かれます
+<br>
+<span class="blue">{age_r}</span> 作品が制限級の場合のみ、その年齢制限を出力：<span class="blue">R-18</span>、<span class="blue">R-18G</span>
+<br>
+<br>
+<strong>📖 小説保存時のコンテンツを最適化</strong>
+<br>
+<br>
+<strong>🔧 Ugoira を APNG 形式で保存する場合、ファイル拡張子を png から apng に変更</strong>
+<br>
+これにより、静止画と Ugoira の区別がより明確になり、一部のソフトウェアが apng 画像を認識しやすくなります。
+<br>
+<br>
+<strong>🔧 作品ページのクイックブックマークボタン (✩) でブックマーク解除が可能になりました</strong>
+<br>
+その作品がすでにブックマークされている場合、このボタン (✩) をクリックしてブックマークを解除できます。`,
+        `<strong>📚 새 기능: 시리즈 소설 자동 병합</strong>
+<br>
+작품을 크롤링할 때, 한 소설이 특정 시리즈에 속하면 다운로더가 해당 시리즈의 모든 소설을 자동으로 크롤링하여 병합할 수 있습니다.
+<br>
+이 기능은 "더보기" - "다운로드" 카테고리에 있으며, 기본적으로 비활성화되어 있으며 필요 시 활성화할 수 있습니다.
+<br>
+<br>
+<strong>✨ 새 설정: 시리즈 소설 병합 시 명명 규칙</strong>
+<br>
+소설을 병합할 때 생성되는 파일의 이름을 설정할 수 있습니다.
+<br>
+이 설정은 "더보기" - "다운로드" 카테고리에 있습니다.
+<br>
+<br>
+<strong>✨ 새 명명 태그 {age} {age_r}</strong>
+<br>
+<span class="blue">{age}</span> 작품의 연령 제한：<span class="blue">All Ages</span>、<span class="blue">R-18</span>、<span class="blue">R-18G</span> 으로 나뉩니다
+<br>
+<span class="blue">{age_r}</span> 작품이 제한 등급일 때만 그 연령 제한을 출력：<span class="blue">R-18</span>、<span class="blue">R-18G</span>
+<br>
+<br>
+<strong>📖 소설 저장 시 콘텐츠 최적화</strong>
+<br>
+<br>
+<strong>🔧 Ugoira 를 APNG 형식으로 저장할 때 파일 확장자를 png 에서 apng 로 변경</strong>
+<br>
+이렇게 하면 정적 이미지와 Ugoira 의 구분이 더 명확해지며, 일부 소프트웨어가 apng 이미지를 인식하는 데 도움이 됩니다.
+<br>
+<br>
+<strong>🔧 작품 페이지의 빠른 북마크 버튼 (✩) 으로 북마크 취소 가능</strong>
+<br>
+해당 작품이 이미 북마크된 경우 이 버튼 (✩) 을 클릭하여 북마크를 취소할 수 있습니다.`,
+        `<strong>📚 Новая функция: Автоматическое объединение серий романов</strong>
+<br>
+При крауле работ, если роман принадлежит определенной серии, загрузчик может автоматически краулить все романы в этой серии и объединять их.
+<br>
+Эта функция находится в категории "Больше" - "Загрузка", отключена по умолчанию, и вы можете включить её при необходимости.
+<br>
+<br>
+<strong>✨ Новая настройка: Правило именования при объединении серий романов</strong>
+<br>
+Вы можете установить имя файла, генерируемого при объединении романов.
+<br>
+Эта настройка находится в категории "Больше" - "Загрузка".
+<br>
+<br>
+<strong>✨ Новые теги именования {age} {age_r}</strong>
+<br>
+<span class="blue">{age}</span> Возрастное ограничение работы, разделено на: <span class="blue">All Ages</span>, <span class="blue">R-18</span>, <span class="blue">R-18G</span>
+<br>
+<span class="blue">{age_r}</span> Выводить возрастное ограничение только если работа ограничена, разделено на: <span class="blue">R-18</span>, <span class="blue">R-18G</span>
+<br>
+<br>
+<strong>📖 Оптимизировано содержимое при сохранении романов</strong>
+<br>
+<br>
+<strong>🔧 При сохранении Ugoira в формате APNG расширение файла изменено с png на apng</strong>
+<br>
+Это делает различие между статическими изображениями и Ugoira более очевидным и помогает некоторому ПО распознавать изображения apng.
+<br>
+<br>
+<strong>🔧 Кнопка быстрого добавления в закладки (✩) на страницах работ теперь может удалять из закладок</strong>
+<br>
+Если работа уже добавлена в закладки, нажатие на эту кнопку (✩) может удалить её из закладок.`,
     ],
 };
 
@@ -38291,7 +38437,7 @@ class Options {
     allOption;
     /**始终保持显示的选项 */
     whiteList = [
-        2, 4, 13, 17, 20, 32, 44, 50, 51, 57, 64,
+        2, 4, 13, 17, 20, 26, 32, 44, 50, 51, 57, 64,
     ];
     // 90 天内添加的设置项，显示 new 角标
     now = Date.now();
@@ -38383,8 +38529,8 @@ class Options {
                 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19, 21, 22,
                 23, 24, 26, 27, 28, 30, 31, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44,
                 46, 47, 48, 49, 50, 51, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65,
-                66, 67, 68, 69, 70, 71, 72, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
-                85, 86, 87, 88, 89, 90, 91,
+                66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83,
+                84, 85, 86, 87, 88, 89, 90, 91,
             ]);
         }
     }
@@ -39746,7 +39892,7 @@ class Wiki {
         'More-Crawl': [57, 59, 75, 69, 35, 39, 74, 54, 85],
         'More-Naming': [65, 19, 42, 43, 22, 46, 29, 83, 67, 66],
         'More-Download': [
-            58, 52, 90, 76, 77, 4, 24, 26, 27, 70, 72, 49, 89, 30, 25, 82, 28,
+            58, 52, 90, 91, 76, 77, 4, 24, 26, 27, 70, 72, 73, 49, 89, 30, 25, 82, 28,
         ],
         'More-Enhance': [
             60, 84, 87, 68, 63, 55, 71, 62, 40, 56, 86, 48, 88, 18, 34, 14,
