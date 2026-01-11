@@ -1,4 +1,3 @@
-import browser from 'webextension-polyfill'
 import { settings } from '../setting/Settings'
 import { EVT } from '../EVT'
 import {
@@ -27,23 +26,18 @@ class FilterSearchResults {
   }
 
   private bindEvents() {
-    // 启用此功能时注入脚本
-    // window.addEventListener(EVT.list.settingChange, (ev: CustomEventInit) => {
-    //   const data = ev.detail.data as any
-    //   if (data.name === 'filterSearchResults' && data.value) {
-    //     this.injectScript()
-    //   }
-    // })
-
-    // 当设置初始化完毕之后，发送 ready 消息
-    window.addEventListener(EVT.list.settingInitialized, (ev) => {
-      window.postMessage(
-        {
-          source: 'pixiv-downloader-content-script',
-          setEnable: settings.filterSearchResults,
-        },
-        window.location.origin
-      )
+    // 当这个设置变化时，通知注入脚本
+    window.addEventListener(EVT.list.settingChange, (ev: CustomEventInit) => {
+      const data = ev.detail.data as any
+      if (data.name === 'filterSearchResults') {
+        window.postMessage(
+          {
+            source: 'pixiv-downloader-content-script',
+            setEnable: settings.filterSearchResults,
+          },
+          window.location.origin
+        )
+      }
     })
 
     // 接收注入脚本发送过来的数据
@@ -137,23 +131,11 @@ class FilterSearchResults {
     )
   }
 
-  // 注入拦截 fetch 请求的脚本
-  // private injected = false
-  // private injectScript() {
-  //   if (!this.injected) {
-  //     const url = browser.runtime.getURL('lib/api_interceptor.js')
-  //     const script = document.createElement('script')
-  //     script.setAttribute('type', 'text/javascript')
-  //     script.setAttribute('src', url)
-  //     document.head.appendChild(script)
-  //     this.injected = true
-  //   }
-  // }
-
   // 需要拦截的 API 列表，都是搜索页面里的 API
   private readonly apiList = [
     'ajax/search/top/',
     'ajax/search/illustrations/',
+    'ajax/search/artworks/',
     'ajax/search/manga/',
     'ajax/search/novels/',
   ]

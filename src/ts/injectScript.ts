@@ -17,4 +17,4 @@ function injectScript() {
 }
 
 // 在公开版本里不启用此功能
-// injectScript()
+injectScript()

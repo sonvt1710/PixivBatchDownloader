@@ -1,6 +1,7 @@
 // 拦截特定的 Pixiv API 请求，获取返回的数据并发送到内容脚本进行过滤
 const apiList = [
   'ajax/search/top/',
+  'ajax/search/artworks/',
   'ajax/search/illustrations/',
   'ajax/search/manga/',
   'ajax/search/novels/',
@@ -10,24 +11,27 @@ const needIntercept = (url) => {
   return apiList.some(api => url.includes(api))
 }
 
-// 控制是否生效（是否转发请求到内容脚本）
+// 控制拦截器是否需要转发请求到内容脚本
 // 如果设置为不生效，则不进行转发，直接放行
 // 有两种情况会设置为不生效：
 // 1. 用户在设置里关闭了搜索结果过滤功能
 // 2. 内容脚本在经过预期时间之后还未就绪，则使此功能失效，以避免无限等待
 let enable = true
 
-setTimeout(() => {
-  if (!ready) {
-    console.log('Content Script 等待超时，所以禁用了 API 拦截器')
-    enable = false
-  }
-}, 1500)
-
 // 内容脚本是否就绪
 // 这个脚本会被尽早注入，此时内容脚本还未执行，所以需要等待内容脚本就绪
 let ready = false
 
+// 如果内容脚本在一定时间后还未就绪，则禁用此功能
+setTimeout(() => {
+  if (!ready) {
+    console.log('Content Script 等待超时，禁用 API 拦截器')
+    enable = false
+  }
+}, 2500)
+
+
+// 等待内容脚本就绪
 async function checkReady () {
   if (!ready) {
     await new Promise((resolve) => {
@@ -53,6 +57,7 @@ window.addEventListener('message', (event) => {
     // console.log('Content Script 已就绪')
     // console.timeEnd('ready')
     // 等待 ready 的时间波动比较大，即使在同一网络条件下刷新页面（并且启用缓存），显示的时间也会从 100 ms 到 1000 ms 波动
+    // 有时甚至会超过 1500 ms
 
     // 接收启用/禁用状态
     if (event.data?.setEnable !== undefined) {
@@ -123,8 +128,15 @@ window.fetch = async function (...args) {
     const data = await clonedResponse.json()
 
     try {
-      // 调用函数将数据发送到 Content Script 并等待过滤结果
+      // 等待内容脚本就绪
       await checkReady()
+      // 再次判断 enable 状态
+      // enable 是默认启用的，但内容脚本就绪时会重设它，有可能改成了禁用。禁用的话就不传递数据进行过滤
+      // 虽然传递数据也没影响，因为内容脚本也会判断此功能是否启用。不过在这里直接返回会更好一些
+      if (!enable) {
+        return response
+      }
+
       const filteredData = await sendDataToContentScriptForFiltering(url, data)
 
       // 使用过滤后的数据创建新的响应对象，并返回给页面原始的调用者

@@ -971,15 +971,15 @@ export const formHtml = `
       <input type="radio" name="imageSize" id="imageSize2" class="need_beautify radio" value="regular">
       <span class="beautify_radio" tabindex="0"></span>
       <label for="imageSize2" data-xztext="_普通"></label>
-      <span class="gray1">(1200px)</span>
+      <label for="imageSize2" class="gray1">(1200px)</label>
       <input type="radio" name="imageSize" id="imageSize3" class="need_beautify radio" value="small">
       <span class="beautify_radio" tabindex="0"></span>
       <label for="imageSize3" data-xztext="_小图"></label>
-      <span class="gray1">(540px)</span>
+      <label for="imageSize3" class="gray1">(540px)</label>
       <input type="radio" name="imageSize" id="imageSize4" class="need_beautify radio" value="thumb">
       <span class="beautify_radio" tabindex="0"></span>
       <label for="imageSize4" data-xztext="_方形缩略图"></label>
-      <span class="gray1">(250px)</span>
+      <label for="imageSize4" class="gray1">(250px)</label>
     </p>
     <p class="option" data-no="25">
       <a href="${wiki.link(25)}" target="_blank" class="has_tip settingNameStyle" data-xztip="_文件体积限制的说明">
@@ -1249,6 +1249,7 @@ export const formHtml = `
         <span class="gray1"> ? </span>
       </a>
       <input type="checkbox" name="previewResult" class="need_beautify checkbox_switch" checked>
+      <span class="beautify_switch" tabindex="0"></span>
       <span class="subOptionWrap" data-show="previewResult">
         <span class="settingNameStyle" data-xztext="_上限"></span>
         <input type="text" name="previewResultLimit" class="setinput_style1 blue" value="1000" style="width:80px;min-width: 80px;">
