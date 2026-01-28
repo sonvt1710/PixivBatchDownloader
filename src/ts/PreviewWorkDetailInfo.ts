@@ -113,7 +113,7 @@ class PreviewWorkDetailInfo {
       `)
     }
 
-    // 生成 R-18(G) 和 AI 标记
+    // 生成 R-18(G) 标记
     let r18HTML = ''
     if (workData.body.xRestrict === 1) {
       r18HTML = '<span class="r18">R-18</span>'
@@ -121,11 +121,17 @@ class PreviewWorkDetailInfo {
       r18HTML = '<span class="r18">R-18G</span>'
     }
 
+    // 判断是不是 AI 生成的作品
     let aiHTML = ''
-    if (
-      workData.body.aiType === 2 ||
-      workData.body.tags.tags.some((tag) => tag.tag === 'AI生成')
-    ) {
+    const tagsWithTransl: string[] = Tools.extractTags(workData, 'both')
+    let aiType = workData.body.aiType
+    if (aiType !== 2) {
+      if (Tools.checkAIFromTags(tagsWithTransl)) {
+        aiType = 2
+      }
+    }
+
+    if (aiType === 2) {
       aiHTML = '<span class="ai">AI</span>'
     }
 
@@ -155,7 +161,7 @@ class PreviewWorkDetailInfo {
 
     // 按钮功能
     wrap.querySelector('#copyTXT')!.addEventListener('click', () => {
-      this.copyTXT(workData)
+      this.copyTXT(workData, aiType)
     })
 
     wrap.querySelector('#copyJSON')!.addEventListener('click', () => {
@@ -256,20 +262,16 @@ class PreviewWorkDetailInfo {
     })
   }
 
-  private copyTXT(workData: ArtworkData) {
+  private copyTXT(workData: ArtworkData, aiType: 0 | 1 | 2) {
     // 组织输出的内容
-    const tags = Tools.extractTags(workData).map((tag) => `#${tag}`)
-    const checkAITag = workData.body.tags.tags.some(
-      (tag) => tag.tag === 'AI生成'
-    )
-
     const array: string[] = []
     const body = workData.body
+    const tags = Tools.extractTags(workData).map((tag) => `#${tag}`)
     array.push(`ID\n${body.id}`)
     array.push(`URL\nhttps://www.pixiv.net/artworks/${body.id}`)
     array.push(`Original\n${body.urls?.original}`)
     array.push(`xRestrict\n${Tools.getXRestrictText(body.xRestrict)}`)
-    array.push(`AI\n${Tools.getAITypeText(checkAITag ? 2 : body.aiType)}`)
+    array.push(`AI\n${Tools.getAITypeText(aiType)}`)
     array.push(`User\n${body.userName}`)
     array.push(`UserID\n${body.userId}`)
     array.push(`Title\n${body.title}`)

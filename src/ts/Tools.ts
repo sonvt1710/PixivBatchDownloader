@@ -947,6 +947,19 @@ class Tools {
     ['ms', 'Janaan AI'],
   ])
 
+  /** 检查标签列表中是否包含 AI 生成的标记 */
+  // 有些用户在上传 AI 作品时选择了非 AI 生成，但标签列表里可能有 AI 生成相关标签例如：
+  // https://www.pixiv.net/en/artworks/136175064
+  // 检查的字符是“AI生成”和“AI-Generated”
+  static checkAIFromTags(tags: string[]) {
+    return tags.some((tag) => {
+      const lowerTag = tag.toLowerCase()
+      return (
+        lowerTag.startsWith('ai生成') || lowerTag.startsWith('ai-generated')
+      )
+    })
+  }
+
   /**如果一个作品是 AI 生成的，则返回特定的字符串标记
    *
    * 这个标记就是作品页面里和标签列表显示在一起的字符串

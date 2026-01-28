@@ -20,7 +20,15 @@ class SaveArtworkData {
     const tagsWithTransl: string[] = Tools.extractTags(data, 'both') // 保存 tag 列表，附带翻译后的 tag
     const tagsTranslOnly: string[] = Tools.extractTags(data, 'transl') // 保存翻译后的 tag 列表
 
-    const aiMarkString = Tools.getAIGeneratedMark(body.aiType)
+    // 判断是不是 AI 生成的作品
+    let aiType = body.aiType
+    if (aiType !== 2) {
+      if (Tools.checkAIFromTags(tagsWithTransl)) {
+        aiType = 2
+      }
+    }
+
+    const aiMarkString = Tools.getAIGeneratedMark(aiType)
     if (aiMarkString) {
       tags.unshift(aiMarkString)
       tagsWithTransl.unshift(aiMarkString)
@@ -28,7 +36,7 @@ class SaveArtworkData {
     }
 
     const filterOpt: FilterOption = {
-      aiType: body.aiType,
+      aiType,
       createDate: body.createDate,
       id: body.id,
       workType: body.illustType,
@@ -76,7 +84,7 @@ class SaveArtworkData {
         const ext = tempExt[tempExt.length - 1]
 
         store.addResult({
-          aiType: body.aiType,
+          aiType,
           id: body.id,
           idNum: idNum,
           // 对于插画和漫画的缩略图，当一个作品包含多个图片文件时，需要转换缩略图 url
@@ -133,7 +141,7 @@ class SaveArtworkData {
         }
 
         store.addResult({
-          aiType: body.aiType,
+          aiType,
           id: body.id,
           idNum: idNum,
           // 动图的 body.urls 里的属性、图片尺寸与插画、漫画一致

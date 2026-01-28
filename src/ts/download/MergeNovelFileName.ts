@@ -48,7 +48,8 @@ class MergeNovelFileName {
         safe: true,
       },
       '{AI}': {
-        value: body.aiType === 2 || body.tags.includes('AI生成') ? 'AI' : '',
+        value:
+          body.aiType === 2 || Tools.checkAIFromTags(body.tags) ? 'AI' : '',
         safe: true,
       },
       '{lang}': {

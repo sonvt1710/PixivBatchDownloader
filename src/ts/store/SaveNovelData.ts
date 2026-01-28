@@ -19,13 +19,21 @@ class SaveNovelData {
     const tags: string[] = Tools.extractTags(data) // tag 列表
     // 小说的标签没有进行翻译，所以没有翻译后的标签
 
-    const aiMarkString = Tools.getAIGeneratedMark(body.aiType)
+    // 判断是不是 AI 生成的作品
+    let aiType = body.aiType
+    if (aiType !== 2) {
+      if (Tools.checkAIFromTags(tags)) {
+        aiType = 2
+      }
+    }
+
+    const aiMarkString = Tools.getAIGeneratedMark(aiType)
     if (aiMarkString) {
       tags.unshift(aiMarkString)
     }
 
     const filterOpt: FilterOption = {
-      aiType: body.aiType,
+      aiType,
       createDate: body.createDate,
       id: body.id,
       workType: illustType,
@@ -75,7 +83,7 @@ class SaveNovelData {
 
       // 保存作品信息
       store.addResult({
-        aiType: body.aiType,
+        aiType,
         id: id,
         idNum: idNum,
         thumb: body.coverUrl || undefined,

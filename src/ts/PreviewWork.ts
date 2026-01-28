@@ -770,10 +770,16 @@ class PreviewWork {
     </span>`)
       }
 
-      if (
-        body.aiType === 2 ||
-        body.tags.tags.some((tag) => tag.tag === 'AI生成')
-      ) {
+      // 判断是不是 AI 生成的作品
+      const tagsWithTransl: string[] = Tools.extractTags(this.workData, 'both')
+      let aiType = body.aiType
+      if (aiType !== 2) {
+        if (Tools.checkAIFromTags(tagsWithTransl)) {
+          aiType = 2
+        }
+      }
+
+      if (aiType === 2) {
         text.push('<span class="ai flag">AI</span>')
       }
 

@@ -3238,8 +3238,16 @@ class CopyWorkInfo {
         const tags = _Tools__WEBPACK_IMPORTED_MODULE_8__.Tools.extractTags(data).map((str) => '#' + str);
         const tagsWithTransl = _Tools__WEBPACK_IMPORTED_MODULE_8__.Tools.extractTags(data, 'both').map((str) => '#' + str);
         const tagsTranslOnly = _Tools__WEBPACK_IMPORTED_MODULE_8__.Tools.extractTags(data, 'transl').map((str) => '#' + str);
+        // 判断是不是 AI 生成的作品
+        const tagsWithTransl2 = _Tools__WEBPACK_IMPORTED_MODULE_8__.Tools.extractTags(data, 'both');
+        let aiType = body.aiType;
+        if (aiType !== 2) {
+            if (_Tools__WEBPACK_IMPORTED_MODULE_8__.Tools.checkAIFromTags(tagsWithTransl2)) {
+                aiType = 2;
+            }
+        }
         // 如果作品是 AI 生成的，但是 Tags 里没有 AI 生成的标签，则添加
-        const aiMarkString = _Tools__WEBPACK_IMPORTED_MODULE_8__.Tools.getAIGeneratedMark(body.aiType);
+        const aiMarkString = _Tools__WEBPACK_IMPORTED_MODULE_8__.Tools.getAIGeneratedMark(aiType);
         const AITag = '#' + aiMarkString;
         if (aiMarkString) {
             if (tags.includes(AITag) === false) {
@@ -3248,7 +3256,7 @@ class CopyWorkInfo {
                 tagsTranslOnly.unshift(AITag);
             }
         }
-        const AI = body.aiType === 2 || tags.includes(AITag);
+        const AI = aiType === 2 || tags.includes(AITag);
         const seriesNavData = body.seriesNavData;
         // 在 html 格式里，使用 <br> 换行
         const lf = format === 'text' ? '\n' : '<br>';
@@ -7534,8 +7542,15 @@ class PreviewWork {
     ${this.index + 1}/${body.pageCount}
     </span>`);
             }
-            if (body.aiType === 2 ||
-                body.tags.tags.some((tag) => tag.tag === 'AI生成')) {
+            // 判断是不是 AI 生成的作品
+            const tagsWithTransl = _Tools__WEBPACK_IMPORTED_MODULE_17__.Tools.extractTags(this.workData, 'both');
+            let aiType = body.aiType;
+            if (aiType !== 2) {
+                if (_Tools__WEBPACK_IMPORTED_MODULE_17__.Tools.checkAIFromTags(tagsWithTransl)) {
+                    aiType = 2;
+                }
+            }
+            if (aiType === 2) {
                 text.push('<span class="ai flag">AI</span>');
             }
             if (body.xRestrict === 1) {
@@ -7734,7 +7749,7 @@ class PreviewWorkDetailInfo {
       </span class="item">
       `);
         }
-        // 生成 R-18(G) 和 AI 标记
+        // 生成 R-18(G) 标记
         let r18HTML = '';
         if (workData.body.xRestrict === 1) {
             r18HTML = '<span class="r18">R-18</span>';
@@ -7742,9 +7757,16 @@ class PreviewWorkDetailInfo {
         else if (workData.body.xRestrict === 2) {
             r18HTML = '<span class="r18">R-18G</span>';
         }
+        // 判断是不是 AI 生成的作品
         let aiHTML = '';
-        if (workData.body.aiType === 2 ||
-            workData.body.tags.tags.some((tag) => tag.tag === 'AI生成')) {
+        const tagsWithTransl = _Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.extractTags(workData, 'both');
+        let aiType = workData.body.aiType;
+        if (aiType !== 2) {
+            if (_Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.checkAIFromTags(tagsWithTransl)) {
+                aiType = 2;
+            }
+        }
+        if (aiType === 2) {
             aiHTML = '<span class="ai">AI</span>';
         }
         wrap.innerHTML = `
@@ -7770,7 +7792,7 @@ class PreviewWorkDetailInfo {
       `;
         // 按钮功能
         wrap.querySelector('#copyTXT').addEventListener('click', () => {
-            this.copyTXT(workData);
+            this.copyTXT(workData, aiType);
         });
         wrap.querySelector('#copyJSON').addEventListener('click', () => {
             this.copyJSON(workData);
@@ -7846,17 +7868,16 @@ class PreviewWorkDetailInfo {
             y: this.mouseY,
         });
     }
-    copyTXT(workData) {
+    copyTXT(workData, aiType) {
         // 组织输出的内容
-        const tags = _Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.extractTags(workData).map((tag) => `#${tag}`);
-        const checkAITag = workData.body.tags.tags.some((tag) => tag.tag === 'AI生成');
         const array = [];
         const body = workData.body;
+        const tags = _Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.extractTags(workData).map((tag) => `#${tag}`);
         array.push(`ID\n${body.id}`);
         array.push(`URL\nhttps://www.pixiv.net/artworks/${body.id}`);
         array.push(`Original\n${body.urls?.original}`);
         array.push(`xRestrict\n${_Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.getXRestrictText(body.xRestrict)}`);
-        array.push(`AI\n${_Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.getAITypeText(checkAITag ? 2 : body.aiType)}`);
+        array.push(`AI\n${_Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.getAITypeText(aiType)}`);
         array.push(`User\n${body.userName}`);
         array.push(`UserID\n${body.userId}`);
         array.push(`Title\n${body.title}`);
@@ -11333,6 +11354,16 @@ class Tools {
         ['th', 'สร้างโดย AI'],
         ['ms', 'Janaan AI'],
     ]);
+    /** 检查标签列表中是否包含 AI 生成的标记 */
+    // 有些用户在上传 AI 作品时选择了非 AI 生成，但标签列表里可能有 AI 生成相关标签例如：
+    // https://www.pixiv.net/en/artworks/136175064
+    // 检查的字符是“AI生成”和“AI-Generated”
+    static checkAIFromTags(tags) {
+        return tags.some((tag) => {
+            const lowerTag = tag.toLowerCase();
+            return (lowerTag.startsWith('ai生成') || lowerTag.startsWith('ai-generated'));
+        });
+    }
     /**如果一个作品是 AI 生成的，则返回特定的字符串标记
      *
      * 这个标记就是作品页面里和标签列表显示在一起的字符串
@@ -22454,7 +22485,7 @@ class MergeNovelFileName {
                 safe: true,
             },
             '{AI}': {
-                value: body.aiType === 2 || body.tags.includes('AI生成') ? 'AI' : '',
+                value: body.aiType === 2 || _Tools__WEBPACK_IMPORTED_MODULE_1__.Tools.checkAIFromTags(body.tags) ? 'AI' : '',
                 safe: true,
             },
             '{lang}': {
@@ -40311,14 +40342,21 @@ class SaveArtworkData {
         const tags = _Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.extractTags(data); // tag 列表
         const tagsWithTransl = _Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.extractTags(data, 'both'); // 保存 tag 列表，附带翻译后的 tag
         const tagsTranslOnly = _Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.extractTags(data, 'transl'); // 保存翻译后的 tag 列表
-        const aiMarkString = _Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.getAIGeneratedMark(body.aiType);
+        // 判断是不是 AI 生成的作品
+        let aiType = body.aiType;
+        if (aiType !== 2) {
+            if (_Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.checkAIFromTags(tagsWithTransl)) {
+                aiType = 2;
+            }
+        }
+        const aiMarkString = _Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.getAIGeneratedMark(aiType);
         if (aiMarkString) {
             tags.unshift(aiMarkString);
             tagsWithTransl.unshift(aiMarkString);
             tagsTranslOnly.unshift(aiMarkString);
         }
         const filterOpt = {
-            aiType: body.aiType,
+            aiType,
             createDate: body.createDate,
             id: body.id,
             workType: body.illustType,
@@ -40359,7 +40397,7 @@ class SaveArtworkData {
                 const tempExt = imgUrl.split('.');
                 const ext = tempExt[tempExt.length - 1];
                 _Store__WEBPACK_IMPORTED_MODULE_3__.store.addResult({
-                    aiType: body.aiType,
+                    aiType,
                     id: body.id,
                     idNum: idNum,
                     // 对于插画和漫画的缩略图，当一个作品包含多个图片文件时，需要转换缩略图 url
@@ -40414,7 +40452,7 @@ class SaveArtworkData {
                     ext = tempExt[tempExt.length - 1];
                 }
                 _Store__WEBPACK_IMPORTED_MODULE_3__.store.addResult({
-                    aiType: body.aiType,
+                    aiType,
                     id: body.id,
                     idNum: idNum,
                     // 动图的 body.urls 里的属性、图片尺寸与插画、漫画一致
@@ -40493,12 +40531,19 @@ class SaveNovelData {
         const bmk = body.bookmarkCount; // 收藏数
         const tags = _Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.extractTags(data); // tag 列表
         // 小说的标签没有进行翻译，所以没有翻译后的标签
-        const aiMarkString = _Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.getAIGeneratedMark(body.aiType);
+        // 判断是不是 AI 生成的作品
+        let aiType = body.aiType;
+        if (aiType !== 2) {
+            if (_Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.checkAIFromTags(tags)) {
+                aiType = 2;
+            }
+        }
+        const aiMarkString = _Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.getAIGeneratedMark(aiType);
         if (aiMarkString) {
             tags.unshift(aiMarkString);
         }
         const filterOpt = {
-            aiType: body.aiType,
+            aiType,
             createDate: body.createDate,
             id: body.id,
             workType: illustType,
@@ -40539,7 +40584,7 @@ class SaveNovelData {
             const embeddedImages = _Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.extractEmbeddedImages(data);
             // 保存作品信息
             _Store__WEBPACK_IMPORTED_MODULE_1__.store.addResult({
-                aiType: body.aiType,
+                aiType,
                 id: id,
                 idNum: idNum,
                 thumb: body.coverUrl || undefined,
