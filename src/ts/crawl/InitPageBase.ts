@@ -289,6 +289,13 @@ abstract class InitPageBase {
   // 获取 id 列表，由各个子类具体定义
   protected getIdList() {}
 
+  /** 检查该用户是否被屏蔽了。如果被屏蔽，则不抓取他的作品，以避免发送不必要的抓取请求 */
+  protected async checkUserId(userId: string) {
+    return await filter.check({
+      userId,
+    })
+  }
+
   // id 列表获取完毕，开始抓取作品内容页
   protected async getIdListFinished() {
     states.slowCrawlMode = false

@@ -198,6 +198,12 @@ class InitUserPage extends InitPageBase {
 
   // 获取用户某些类型的作品的 id 列表
   protected async getIdList() {
+    const userId = Tools.getCurrentPageUserID()
+    const checkUser = await this.checkUserId(userId)
+    if (!checkUser) {
+      return this.getIdListFinished()
+    }
+
     let type: userWorksType[] = []
 
     switch (this.listType) {
@@ -217,11 +223,7 @@ class InitUserPage extends InitPageBase {
         type = ['novels']
         break
     }
-
-    let idList = await API.getUserWorksByType(
-      Tools.getCurrentPageUserID(),
-      type
-    )
+    let idList = await API.getUserWorksByType(userId, type)
 
     // 判断是否全都是小说，如果是，把每页的作品个数设置为 24 个
     const allWorkIsNovels = idList.every((data) => {

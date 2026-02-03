@@ -12730,6 +12730,12 @@ class InitPageBase {
     }
     // 获取 id 列表，由各个子类具体定义
     getIdList() { }
+    /** 检查该用户是否被屏蔽了.如果被屏蔽，则不抓取它的作品，避免发送不必要的抓取请求 */
+    async checkUserId(userId) {
+        return await _filter_Filter__WEBPACK_IMPORTED_MODULE_21__.filter.check({
+            userId,
+        });
+    }
     // id 列表获取完毕，开始抓取作品内容页
     async getIdListFinished() {
         _store_States__WEBPACK_IMPORTED_MODULE_9__.states.slowCrawlMode = false;
@@ -13971,8 +13977,13 @@ class InitArtworkPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE_0__.I
         }
     }
     async getIdList() {
+        const userId = _Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.getCurrentPageUserID();
+        const checkUser = await this.checkUserId(userId);
+        if (!checkUser) {
+            return this.getIdListFinished();
+        }
         let type = ['illusts', 'manga'];
-        let idList = await _API__WEBPACK_IMPORTED_MODULE_5__.API.getUserWorksByType(_Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.getCurrentPageUserID(), type);
+        let idList = await _API__WEBPACK_IMPORTED_MODULE_5__.API.getUserWorksByType(userId, type);
         // 储存符合条件的 id
         let nowId = parseInt(_Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.getIllustId(window.location.href));
         idList.forEach((id) => {
@@ -17021,8 +17032,12 @@ class InitFollowingPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE_0__
         }
         let idList = [];
         try {
-            idList = await _API__WEBPACK_IMPORTED_MODULE_3__.API.getUserWorksByType(this.userList[this.index]);
-            idList = _crawl_CrawlLatestFewWorks__WEBPACK_IMPORTED_MODULE_12__.crawlLatestFewWorks.filter(idList);
+            const userId = this.userList[this.index];
+            const checkUser = await this.checkUserId(userId);
+            if (checkUser) {
+                idList = await _API__WEBPACK_IMPORTED_MODULE_3__.API.getUserWorksByType(userId);
+                idList = _crawl_CrawlLatestFewWorks__WEBPACK_IMPORTED_MODULE_12__.crawlLatestFewWorks.filter(idList);
+            }
         }
         catch {
             this.getIdList();
@@ -17582,6 +17597,11 @@ class InitUserPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE_0__.Init
     }
     // 获取用户某些类型的作品的 id 列表
     async getIdList() {
+        const userId = _Tools__WEBPACK_IMPORTED_MODULE_7__.Tools.getCurrentPageUserID();
+        const checkUser = await this.checkUserId(userId);
+        if (!checkUser) {
+            return this.getIdListFinished();
+        }
         let type = [];
         switch (this.listType) {
             case ListType.UserHome:
@@ -17600,7 +17620,7 @@ class InitUserPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE_0__.Init
                 type = ['novels'];
                 break;
         }
-        let idList = await _API__WEBPACK_IMPORTED_MODULE_3__.API.getUserWorksByType(_Tools__WEBPACK_IMPORTED_MODULE_7__.Tools.getCurrentPageUserID(), type);
+        let idList = await _API__WEBPACK_IMPORTED_MODULE_3__.API.getUserWorksByType(userId, type);
         // 判断是否全都是小说，如果是，把每页的作品个数设置为 24 个
         const allWorkIsNovels = idList.every((data) => {
             return data.type === 'novels';
@@ -40649,16 +40669,9 @@ class SaveNovelData {
             // 系列标题和序号
             const seriesTitle = body.seriesNavData ? body.seriesNavData.title : '';
             const seriesOrder = body.seriesNavData ? body.seriesNavData.order : null;
-            // 保存小说的一些元数据
-            let metaArr = [];
-            const pageUrl = `https://www.pixiv.net/novel/show.php?id=${id}`;
-            const tagsA = [];
-            for (const tag of tags) {
-                tagsA.push('#' + tag);
-            }
-            // 这个 description 是保存到抓取结果里的，尽量保持原样，会保留 html 标签
+            // 这个 description 是保存到抓取结果里的，尽量保持原样，所以保留了 html 标签
             const description = _utils_Utils__WEBPACK_IMPORTED_MODULE_4__.Utils.htmlDecode(body.description);
-            // metaDescription 保存在 novelMeta.description 和 novelMeta.meta 里
+            // descriptionNoHtmlTag 保存在 novelMeta.description 里
             // 它会在生成的小说里显示，供读者阅读，所以移除了 html 标签，只保留纯文本
             // 处理后，换行标记是 \n 而不是 <br/>
             const descriptionNoHtmlTag = _Tools__WEBPACK_IMPORTED_MODULE_3__.Tools.replaceEPUBDescription(_utils_Utils__WEBPACK_IMPORTED_MODULE_4__.Utils.htmlToText(description));

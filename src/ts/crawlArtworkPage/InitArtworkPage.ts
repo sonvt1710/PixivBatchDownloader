@@ -145,11 +145,14 @@ class InitArtworkPage extends InitPageBase {
   }
 
   protected async getIdList() {
+    const userId = Tools.getCurrentPageUserID()
+    const checkUser = await this.checkUserId(userId)
+    if (!checkUser) {
+      return this.getIdListFinished()
+    }
+
     let type: userWorksType[] = ['illusts', 'manga']
-    let idList = await API.getUserWorksByType(
-      Tools.getCurrentPageUserID(),
-      type
-    )
+    let idList = await API.getUserWorksByType(userId, type)
 
     // 储存符合条件的 id
     let nowId = parseInt(Tools.getIllustId(window.location.href))
