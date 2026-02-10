@@ -10,6 +10,7 @@ import './OpenCenterPanel'
 import { settings } from './setting/Settings'
 import { BoldKeywords } from './BoldKeywords'
 import { showHelp } from './ShowHelp'
+import { store } from './store/Store'
 
 // 选项卡的名称和索引
 enum Tabbar {
@@ -190,7 +191,7 @@ class CenterPanel {
     // 抓取完作品详细数据时，显示
     for (const ev of [EVT.list.crawlComplete, EVT.list.resume]) {
       window.addEventListener(ev, () => {
-        if (!states.quickCrawl) {
+        if (!states.quickCrawl && store.result.length > 0) {
           this.show()
         }
       })

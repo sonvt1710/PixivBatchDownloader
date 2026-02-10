@@ -311,7 +311,8 @@ body[data-page-type='2'] li[size='1'] > div {
   width: auto !important;
   max-width: 540px;
 }
-body[data-page-type='2'] div[width='184'] {
+body[data-page-type='2'] div[width='184'],
+body[data-page-type='2'] div[width='206'] {
   width: auto !important;
   height: auto !important;
 }

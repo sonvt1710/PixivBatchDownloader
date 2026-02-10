@@ -12,7 +12,7 @@ import { ButtonsConfig, BtnConfig } from './ButtonsConfig'
 
 // 在图片作品的缩略图上显示一些按钮
 // 目前它只管理在 PC 上生效的缩略图按钮
-class ButtonsOnThumbOnPC extends ButtonsConfig {
+class ButtonsOnArtworkThumbOnPC extends ButtonsConfig {
   constructor() {
     super()
     if (Config.mobile) {
@@ -194,4 +194,4 @@ class ButtonsOnThumbOnPC extends ButtonsConfig {
   }
 }
 
-new ButtonsOnThumbOnPC()
+new ButtonsOnArtworkThumbOnPC()

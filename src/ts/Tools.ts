@@ -173,6 +173,41 @@ class Tools {
     }
   }
 
+  /**从 DOM 元素中获取系列的 id **/
+  static findSeriesIdFromElement(
+    el: HTMLElement,
+    type: 'illusts' | 'novels' = 'illusts'
+  ): string {
+    if (!el) {
+      return ''
+    }
+    let a: HTMLAnchorElement
+    if (el.nodeName === 'A') {
+      a = el as HTMLAnchorElement
+    } else {
+      // 不区分是插画还是小说，因为它们的 id 都在 /series/ 后面
+      a = el.querySelector('a[href*="series/"]') as HTMLAnchorElement
+    }
+    if (!a) {
+      return ''
+    }
+
+    // 判断链接是插画/漫画系列还是小说系列
+    if (type === 'novels') {
+      // https://www.pixiv.net/novel/series/9114820
+      if (!a.href.includes('/novel/series/')) {
+        return ''
+      }
+    } else {
+      // https://www.pixiv.net/user/9460149/series/320377
+      if (!a.href.includes('/user/')) {
+        return ''
+      }
+    }
+    // 如果链接符合 type，则提取系列 id
+    return Utils.getURLPathField(a.href, 'series')
+  }
+
   static readonly userIDRegExp = /\/users\/(\d+)/
   static getUserID(url: string) {
     const test = url.match(this.userIDRegExp)

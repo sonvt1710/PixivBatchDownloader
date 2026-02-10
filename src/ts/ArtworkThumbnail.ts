@@ -64,6 +64,11 @@ class ArtworkThumbnail extends WorkThumbnail {
   protected readonly selectors: string[] = []
 
   protected findThumbnail(parent: HTMLElement) {
+    // pathname 里有 /novel 的页面里也可能有图像作品，所以这个条件不启用
+    // if(window.location.pathname.includes('/novel')){
+    //   return
+    // }
+
     if (!parent.querySelectorAll) {
       return
     }
@@ -80,12 +85,14 @@ class ArtworkThumbnail extends WorkThumbnail {
         continue
       }
 
-      // div[size="184"] 只在 发现 和 发现-推荐用户 和 新版首页 里使用
+      // div[size="184"] 在这些页面里使用
       if (
         selector === 'div[size="184"]' &&
         pageType.type !== pageType.list.Discover &&
         pageType.type !== pageType.list.DiscoverUsers &&
-        pageType.type !== pageType.list.Home
+        pageType.type !== pageType.list.Home &&
+        pageType.type !== pageType.list.SearchUsers &&
+        pageType.type !== pageType.list.Unsupported
       ) {
         continue
       }

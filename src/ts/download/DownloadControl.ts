@@ -229,25 +229,33 @@ class DownloadControl {
       }
     })
 
-    window.addEventListener(EVT.list.downloadComplete, () => {
-      // 如果有等待中的下载任务，则开始下载等待中的任务
-      if (store.waitingIdList.length === 0) {
-        toast.success(lang.transl('_下载完毕2'), {
-          position: 'center',
-        })
+    // 当下载完毕，或者抓取结果为空时，检查是否有等待下载的任务
+    const checkWaitingIdListEvents = [
+      EVT.list.downloadComplete,
+      EVT.list.crawlEmpty,
+    ]
+    checkWaitingIdListEvents.forEach((evt) => {
+      window.addEventListener(evt, () => {
+        // 如果有等待中的下载任务，则开始下载等待中的任务
+        if (store.waitingIdList.length === 0) {
+          toast.success(lang.transl('_下载完毕2'), {
+            position: 'center',
+          })
 
-        // 通知后台清除保存的此标签页的 idList
-        browser.runtime.sendMessage({
-          msg: 'clearDownloadsTempData',
-        })
-      } else {
-        window.clearTimeout(this.crawlIdListTimer)
-        this.crawlIdListTimer = window.setTimeout(() => {
-          const idList = store.waitingIdList
-          store.waitingIdList = []
-          EVT.fire('crawlIdList', idList)
-        }, 0)
-      }
+          // 通知后台清除保存的此标签页的 idList
+          browser.runtime.sendMessage({
+            msg: 'clearDownloadsTempData',
+          })
+        } else {
+          // 下载等待中的任务
+          window.clearTimeout(this.crawlIdListTimer)
+          this.crawlIdListTimer = window.setTimeout(() => {
+            const idList = [...store.waitingIdList]
+            store.waitingIdList = []
+            EVT.fire('crawlIdList', idList)
+          }, 0)
+        }
+      })
     })
   }
 

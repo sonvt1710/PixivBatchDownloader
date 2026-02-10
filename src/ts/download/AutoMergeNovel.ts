@@ -70,10 +70,19 @@ class AutoMergeNovel {
     }
   }
 
-  public async merge(seriesId: string, seriesTitle?: string) {
+  // 参数 forceStart: 如果为 true，则使 this.stop = false，以便可以执行合并操作
+  public async merge(
+    seriesId: string,
+    seriesTitle?: string,
+    forceStart = false
+  ) {
     if (!seriesId) {
       toast.error('seriesId is undefined')
       return
+    }
+
+    if (forceStart) {
+      this.stop = false
     }
 
     const absent = this.push(seriesId)
@@ -151,7 +160,7 @@ class AutoMergeNovel {
           }
 
           this.reset()
-        }, 10)
+        }, 0)
       })
     })
 

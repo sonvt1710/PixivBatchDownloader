@@ -64,6 +64,8 @@ enum PageName {
   Dashboard,
   /** 比赛页面 */
   Contest,
+  /** 搜索用户 */
+  SearchUsers,
 }
 
 // 获取页面类型
@@ -175,6 +177,8 @@ class PageType {
       !path.endsWith('.php')
     ) {
       return PageName.Contest
+    } else if (path.startsWith('/search/users')) {
+      return PageName.SearchUsers
     } else {
       // 没有匹配到可用的页面类型
       return PageName.Unsupported
@@ -210,7 +214,7 @@ class PageType {
       },
       {
         type: PageName.UserHome,
-        url: 'https://www.pixiv.net/users/89469319',
+        url: 'https://www.pixiv.net/users/9460149',
       },
       {
         type: PageName.BookmarkLegacy,
@@ -218,11 +222,15 @@ class PageType {
       },
       {
         type: PageName.Bookmark,
-        url: 'https://www.pixiv.net/users/96661459/bookmarks/artworks',
+        url: 'https://www.pixiv.net/users/9460149/bookmarks/novels',
       },
       {
         type: PageName.ArtworkSearch,
         url: 'https://www.pixiv.net/tags/%E5%8E%9F%E7%A5%9E/artworks?s_mode=s_tag',
+      },
+      {
+        type: PageName.SearchUsers,
+        url: 'https://www.pixiv.net/search/users?s_mode=s_usr&nick=%E5%8E%9F%E7%A5%9E&i=1&comment=&p=1',
       },
       {
         type: PageName.AreaRanking,
