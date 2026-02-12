@@ -42,6 +42,8 @@ class ArtworkThumbnail extends WorkThumbnail {
         '.hotBarWorkLink',
         // 在比赛页面使用
         '.thumbnail-container',
+        // 在某些比赛页面里会有“注目的应募作品”一栏，使用这个选择器
+        '._module-carousel-container>div',
         // 首页-插画-瞩目的企划目录里的作品
         'li[size="1"]',
       ]
@@ -162,7 +164,7 @@ class ArtworkThumbnail extends WorkThumbnail {
       }
 
       if (
-        selector === '.thumbnail-container' &&
+        (selector === '.thumbnail-container' || selector=='._module-carousel-container>div') &&
         pageType.type !== pageType.list.Contest
       ) {
         continue

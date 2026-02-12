@@ -1681,6 +1681,8 @@ class ArtworkThumbnail extends _WorkThumbnail__WEBPACK_IMPORTED_MODULE_0__.WorkT
                 '.hotBarWorkLink',
                 // 在比赛页面使用
                 '.thumbnail-container',
+                // 在某些比赛页面里会有“注目的应募作品”一栏，使用这个选择器
+                '._module-carousel-container>div',
                 // 首页-插画-瞩目的企划目录里的作品
                 'li[size="1"]',
             ];
@@ -1768,7 +1770,7 @@ class ArtworkThumbnail extends _WorkThumbnail__WEBPACK_IMPORTED_MODULE_0__.WorkT
                 _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.type !== _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.list.ArtworkRanking) {
                 continue;
             }
-            if (selector === '.thumbnail-container' &&
+            if ((selector === '.thumbnail-container' || selector == '._module-carousel-container>div') &&
                 _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.type !== _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.list.Contest) {
                 continue;
             }
