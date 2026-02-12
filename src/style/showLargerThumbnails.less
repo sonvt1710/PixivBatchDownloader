@@ -111,6 +111,12 @@ body[data-page-type='0'] {
     width: 92vw;
   }
 
+  // 新版首页底部左侧的竖向一列大图里，点击某个作品的收藏按钮后会在它下面显示几个新的作品
+  // 原样式限制了宽度，导致更大的缩略图只能显示一部分，现在取消宽度限制
+  ul.grid-cols-6 {
+    grid-template-columns: auto !important;
+  }
+
   // 正在举办的比赛里的 div，解除宽度 184px 的限制
   .eajBeO {
     width: auto !important;
