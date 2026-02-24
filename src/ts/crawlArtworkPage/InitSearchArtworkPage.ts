@@ -360,14 +360,17 @@ class InitSearchArtworkPage extends InitPageBase {
       ) as HTMLElement)
   }
 
-  // 组织要请求的 url 中的参数
+  // 初始化 API 里要使用的参数
   private initFetchURL() {
     // 从 URL 中获取发起请求时的分类路径
     let APIPath = 'illustrations'
-    if (location.pathname.startsWith('/tags')) {
-      // 如果是 /tags 开头的 URL，分类路径在搜索词后面，例如
+    const path = location.pathname
+    if (path.includes('/tags/')) {
+      // 如果是包含 /tags/ 的 URL，分类路径在搜索词后面，例如：
       // https://www.pixiv.net/tags/Fate%2FGrandOrder/illustrations
-      APIPath = location.pathname.split('tags/')[1].split('/')[1] ?? 'artworks'
+      // 注意：这里的判断需要用 includes 而不是 startsWith，因为当 Pixiv 的页面语言为英语时， /tags 前面会有 /en
+      // /search 前面则始终不会有 /en
+      APIPath = path.split('tags/')[1].split('/')[1] ?? 'artworks'
       // 在“顶部”页面的时候，URL 里是没有分类的，会是 undefined，此时使用代表“顶部”的 'artworks'
     } else {
       // 处理以 /search 开头的 URL
@@ -413,7 +416,6 @@ class InitSearchArtworkPage extends InitPageBase {
         }
 
         if (param === 'type') {
-          const path = location.pathname
           if (path.startsWith('/search')) {
             // 虽然 URL 里的 type 是 illust_ugoira，但查询时要使用 illust_and_ugoira
             // https://www.pixiv.net/search?q=%E5%8E%9F%E7%A5%9E&s_mode=tag&type=illust_ugoira
@@ -423,7 +425,7 @@ class InitSearchArtworkPage extends InitPageBase {
             }
           }
 
-          if (path.startsWith('/tags')) {
+          if (path.includes('/tags/')) {
             // https://www.pixiv.net/tags/%E5%8E%9F%E7%A5%9E/illustrations
             // 虽然上面的 URL 里没有 type 参数，但是 pixiv 的查询参数里附带了 type='illust_and_ugoira'
             // 下载器也照样处理一下
@@ -437,7 +439,7 @@ class InitSearchArtworkPage extends InitPageBase {
 
         // 请求里的 s_mode 也不是 url 里的 s_mode
         if (param === 's_mode') {
-          if (location.pathname.startsWith('/search')) {
+          if (path.startsWith('/search')) {
             if (value === 'tag') {
               this.option[param] = 's_tag'
             }
@@ -495,7 +497,6 @@ class InitSearchArtworkPage extends InitPageBase {
     window.setTimeout(() => {
       this.getIdList(p)
     }, Config.retryTime)
-    // 限制时间大约是 3 分钟，这里为了保险起见，设置了更大的延迟时间。
   }
 
   private tipEmptyResult = Utils.debounce(() => {

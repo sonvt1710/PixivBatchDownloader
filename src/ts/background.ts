@@ -58,9 +58,9 @@ browser.runtime.onMessage.addListener(async function (
   // 不能直接在上面设置类型为 msg: SendToBackEndData，否则会报错。因此需要使用类型守卫，真麻烦
   if (!isMsg(msg)) {
     console.warn('收到了无效的消息:', msg)
-    return
+    return false
   }
-  // console.log(msg)
+
   const tabId = sender.tab!.id!
   // 当存在同名文件时，默认覆写，但前台也可以指定处理方式
   const conflictAction = msg.conflictAction || 'overwrite'
@@ -164,6 +164,8 @@ browser.runtime.onMessage.addListener(async function (
       setData({ batchNo, idList })
     }
   }
+
+  return false
 })
 
 const isFirefox = navigator.userAgent.includes('Firefox')

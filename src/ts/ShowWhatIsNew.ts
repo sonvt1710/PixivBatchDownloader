@@ -20,7 +20,6 @@ class ShowWhatIsNew {
       <span>${lang.transl('_扩展程序升到x版本', this.flag)}</span>
       <br>
       <br>
-      <span>${lang.transl('_版本更新说明18_3_0')}</span>
       <br>
       <br>
       <span>${lang.transl('_优化用户体验')}</span>

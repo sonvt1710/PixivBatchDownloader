@@ -634,10 +634,11 @@ class Tools {
    * @param userID 用户 id
    * @returns 超链接（A 标签）
    */
-  static createUserLink(userID: number | string) {
+  static createUserLink(userID: number | string, userName = '') {
     const idNum = typeof userID === 'number' ? userID : Number.parseInt(userID)
     const href = `https://www.pixiv.net/users/${idNum}`
-    return `<a href="${href}" target="_blank">${idNum}</a>`
+    // 如果传入了 userName，则使用 userName 作为链接文本，否则使用 id 作为链接文本
+    return `<a href="${href}" target="_blank">${userName || idNum}</a>`
   }
 
   // 简介里的链接目前有这 3 种，其中站内链接缩写需要替换成完整的 URL，否则将其转换为文本时，只会留下缩写，丢失了链接。

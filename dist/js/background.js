@@ -1232,6 +1232,124 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 
 /***/ }),
 
+/***/ "./src/ts/DeletedFollowingUsers.ts":
+/*!*****************************************!*\
+  !*** ./src/ts/DeletedFollowingUsers.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   deletedFollowingUsers: () => (/* binding */ deletedFollowingUsers)
+/* harmony export */ });
+// 这是一个后台脚本
+// 当关注列表变化时，保存被删除的用户 ID。这些用户可能是被取消了关注，也可能是账号已经不存在了。
+// 它依赖 ManageFollowing 类提供数据源，对数据进行处理之后，把被删除的用户 ID 保存到 FollowingData 的 deletedUsers 数组里。
+class DeletedFollowingUsers {
+    constructor() {
+        setInterval(() => {
+            this.updateUserInfo();
+        }, 1000);
+    }
+    dataSource;
+    updateStatus = 'idle';
+    changed = false;
+    /** 更新整个关注列表时，找出被删除的用户 ID 并保存到 deletedUsers 中 */
+    whenSetFollowingList(dataSource, newFollowing) {
+        this.initDeletedUsers(dataSource);
+        // 遍历 dataSource.deletedUsers，如果 newFollowing 里含有对应的 userID（可能是用户重新关注了他），则把他从 deletedUsers 里删除
+        dataSource.deletedUsers = dataSource.deletedUsers.filter((deletedUser) => !newFollowing.includes(deletedUser.id));
+        // 查找被删除的用户 ID
+        const deletedUsers = dataSource.following
+            .filter((id) => !newFollowing.includes(id))
+            .map((id) => ({
+            id,
+            name: '',
+            avatar: '',
+            exist: true,
+            deleteByUser: false,
+            deletedAt: new Date().getTime(),
+        }));
+        deletedUsers.forEach((user) => {
+            const exist = dataSource.deletedUsers.find((u) => u.id === user.id);
+            if (!exist) {
+                dataSource.deletedUsers.push(user);
+            }
+        });
+    }
+    /** 用户主动取消关注某个用户时，把对应的 userID 添加到 deletedUsers里 */
+    whenDeleteFollowing(dataSource, userID) {
+        this.initDeletedUsers(dataSource);
+        const exist = dataSource.deletedUsers.find((u) => u.id === userID);
+        if (!exist) {
+            dataSource.deletedUsers.push({
+                id: userID,
+                name: '',
+                avatar: '',
+                exist: true,
+                deleteByUser: true,
+                deletedAt: new Date().getTime(),
+            });
+        }
+    }
+    /** 用户手动关注某个用户时，如果 deletedUsers 里含有对应的 userID，则把他从 deletedUsers 里删除（这说明用户重新关注了他） */
+    whenAddFollowing(dataSource, userID) {
+        this.initDeletedUsers(dataSource);
+        dataSource.deletedUsers = dataSource.deletedUsers.filter((deletedUser) => deletedUser.id !== userID);
+    }
+    initDeletedUsers(dataSource) {
+        this.dataSource = dataSource;
+        if (!dataSource.deletedUsers) {
+            dataSource.deletedUsers = [];
+        }
+    }
+    // 获取用户的名称和头像信息。每次执行只会获取一个用户的数据
+    async updateUserInfo() {
+        if (!this.dataSource || this.updateStatus === 'updating') {
+            return;
+        }
+        const user = this.dataSource.deletedUsers.find((deletedUser) => deletedUser.exist && !deletedUser.name && !deletedUser.avatar);
+        if (!user) {
+            return;
+        }
+        try {
+            this.updateStatus = 'updating';
+            // full=0 获取简略信息，full=1 获取完整信息。我们这里只需要用户名字和头像，所以用 full=0 就够了
+            const url = `https://www.pixiv.net/ajax/user/${user.id}?full=0`;
+            const res = await fetch(url);
+            const json = await res.json();
+            // 如果 error 为 true，说明这个用户不存在了
+            if (json.error) {
+                user.exist = false;
+            }
+            else {
+                // 判断这个用户是否还在 deletedUsers 里。如果不存在，或者数据显示关注了该用户，则不修改其信息
+                const exist = this.dataSource.deletedUsers.find((u) => u.id === user.id);
+                if (exist && json.body.isFollowed === false) {
+                    // 储存用户信息
+                    user.name = json.body.name || '';
+                    user.avatar = json.body.imageBig || json.body.image || '';
+                    user.exist = true;
+                }
+            }
+            // 重新 dispatch 数据，以便内容脚本能拿到更新后的 deletedUsers 数据
+            this.changed = true;
+        }
+        catch (e) {
+            console.log(`updateUserInfo: 获取用户 ${user.id} 的信息时出错了`, e);
+        }
+        finally {
+            this.updateStatus = 'idle';
+        }
+    }
+}
+const deletedFollowingUsers = new DeletedFollowingUsers();
+
+
+
+/***/ }),
+
 /***/ "./src/ts/ManageFollowing.ts":
 /*!***********************************!*\
   !*** ./src/ts/ManageFollowing.ts ***!
@@ -1242,11 +1360,21 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! webextension-polyfill */ "./node_modules/webextension-polyfill/dist/browser-polyfill.js");
 /* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _DeletedFollowingUsers__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./DeletedFollowingUsers */ "./src/ts/DeletedFollowingUsers.ts");
+
 
 // 这是一个后台脚本
 class ManageFollowing {
     constructor() {
         this.restore();
+        // 定时检查 deletedUsers 是否有更新，如果有更新则重新 dispatch 数据并储存数据
+        setInterval(() => {
+            if (_DeletedFollowingUsers__WEBPACK_IMPORTED_MODULE_1__.deletedFollowingUsers.changed) {
+                this.dispatchFollowingList();
+                this.storage();
+                _DeletedFollowingUsers__WEBPACK_IMPORTED_MODULE_1__.deletedFollowingUsers.changed = false;
+            }
+        }, 1000);
         webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().runtime.onInstalled.addListener(async () => {
             // 每次更新或刷新扩展时尝试读取数据，如果数据不存在则设置数据
             const data = await webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().storage.local.get(this.store);
@@ -1289,21 +1417,20 @@ class ManageFollowing {
                 // 当前台获取新的关注列表完成之后，会发送此消息。
                 // 如果发送消息的页面和发起请求的页面是同一个，则解除锁定状态
                 if (sender.tab.id === this.updateTaskTabID) {
-                    // set 操作不会被放入等待队列中，而且总是会被立即执行
-                    // 这是因为在请求数据的过程中可能产生了其他操作，set 操作的数据可能已经是旧的了
-                    // 所以需要先应用 set 里的数据，然后再执行其他操作，在旧数据的基础上进行修改
-                    this.setData(data);
-                    // 如果队列中没有等待的操作，则立即派发数据并储存数据
-                    // 如果有等待的操作，则不派发和储存数据，因为稍后队列执行完毕后也会派发和储存数据
-                    // 这是为了避免重复派发和储存数据，避免影响性能
-                    if (this.queue.length === 0) {
-                        this.dispatchFollowingList();
-                        this.storage();
-                    }
                     this.status = 'idle';
-                    return;
                 }
-                // 如果不是同一个页面，这个 set 操作会被丢弃
+                // 不管数据是否来自于发起请求的页面都更新数据。因为有些操作可能会直接更新数据，没有事先请求批准的环节
+                // set 操作不会被放入等待队列中，而且总是会被立即执行
+                // 这是因为在请求数据的过程中可能产生了其他操作，set 操作的数据可能已经是旧的了
+                // 所以需要先应用 set 里的数据，然后再执行其他操作，在旧数据的基础上进行修改
+                this.setData(data);
+                // 如果队列中没有等待的操作，则立即派发数据并储存数据
+                // 如果有等待的操作，则不派发和储存数据，因为稍后队列执行完毕后也会派发和储存数据
+                // 这是为了避免重复派发和储存数据，避免影响性能
+                if (this.queue.length === 0) {
+                    this.dispatchFollowingList();
+                    this.storage();
+                }
             }
         });
         // 监听用户新增或取消一个关注的请求
@@ -1404,6 +1531,11 @@ class ManageFollowing {
      * 如果未指定 tab，则向所有的 pixiv 标签页派发
      */
     async dispatchFollowingList(tab) {
+        // 调试用：重置 deletedUsers 数据
+        // this.data.forEach(item => {
+        //   item.deletedUsers = []
+        // })
+        // this.storage()
         if (tab?.id) {
             webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().tabs.sendMessage(tab.id, {
                 msg: 'dispathFollowingData',
@@ -1449,15 +1581,21 @@ class ManageFollowing {
     setData(data) {
         const index = this.data.findIndex((following) => following.user === data.user);
         if (index > -1) {
+            // 对比新旧数据，找出被删除的用户 ID，并将其添加到 deletedUsers 列表中
+            const oldFollowing = this.data[index];
+            _DeletedFollowingUsers__WEBPACK_IMPORTED_MODULE_1__.deletedFollowingUsers.whenSetFollowingList(oldFollowing, data.following);
+            // 更新当前登录的用户的关注数据
             this.data[index].following = data.following;
             this.data[index].total = data.total;
             this.data[index].time = new Date().getTime();
         }
         else {
+            // 之前没有保存过当前登录的用户的关注数据，新增一份数据
             this.data.push({
                 user: data.user,
                 following: data.following,
                 total: data.total,
+                deletedUsers: [],
                 time: new Date().getTime(),
             });
         }
@@ -1468,10 +1606,13 @@ class ManageFollowing {
             return;
         }
         if (operate.action === 'add') {
+            _DeletedFollowingUsers__WEBPACK_IMPORTED_MODULE_1__.deletedFollowingUsers.whenAddFollowing(this.data[i], operate.userID);
             this.data[i].following.push(operate.userID);
             this.data[i].total = this.data[i].total + 1;
         }
         else if (operate.action === 'remove') {
+            _DeletedFollowingUsers__WEBPACK_IMPORTED_MODULE_1__.deletedFollowingUsers.whenDeleteFollowing(this.data[i], operate.userID);
+            // 更新关注列表和总数
             const index = this.data[i].following.findIndex((id) => id === operate.userID);
             if (index > -1) {
                 this.data[i].following.splice(index, 1);
@@ -1642,9 +1783,8 @@ webextension_polyfill__WEBPACK_IMPORTED_MODULE_1___default().runtime.onMessage.a
     // 不能直接在上面设置类型为 msg: SendToBackEndData，否则会报错。因此需要使用类型守卫，真麻烦
     if (!isMsg(msg)) {
         console.warn('收到了无效的消息:', msg);
-        return;
+        return false;
     }
-    // console.log(msg)
     const tabId = sender.tab.id;
     // 当存在同名文件时，默认覆写，但前台也可以指定处理方式
     const conflictAction = msg.conflictAction || 'overwrite';
@@ -1738,6 +1878,7 @@ webextension_polyfill__WEBPACK_IMPORTED_MODULE_1___default().runtime.onMessage.a
             setData({ batchNo, idList });
         }
     }
+    return false;
 });
 const isFirefox = navigator.userAgent.includes('Firefox');
 async function getFileURL(msg) {

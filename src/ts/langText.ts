@@ -3165,6 +3165,7 @@ It is recommended to set a number less than 256, the default value is 200.`,
   ],
   _公开: ['公开', '公開', 'Public', '公開', '공개', 'Публичный'],
   _不公开: ['不公开', '非公開', 'Private', '非公開', '비공개', 'Приватный'],
+  _非公开: ['非公开', '非公開', 'Private', '非公開', '비공개', 'Приватный'],
   _已收藏: [
     '已收藏',
     '已收藏',
@@ -3682,7 +3683,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     下载的文件保存在浏览器的下载目录里。如果你想保存到其他位置，需要修改浏览器的下载目录。
     <br><br>
-    建议您在浏览器的下载设置中关闭“下载前询问每个文件的保存位置”，否则保存每个文件时都会显示另存为对话框。
+    <strong>建议您在浏览器的下载设置中关闭“下载前询问每个文件的保存位置”，否则保存每个文件时都会显示另存为对话框。</strong>
     <br><br>
     下载器默认启用了一些增强功能，这可能会导致 Pixiv 的一些页面样式产生变化。你可以在下载器的“更多”标签页里启用或关闭这些功能。
     <br><br>
@@ -3693,7 +3694,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     下載的文件保存在瀏覽器的下載目錄裡。如果您想保存到其他位置，需要修改瀏覽器的下載目錄。
     <br><br>
-    建議您在瀏覽器的下載設置中關閉“下載前詢問每個文件的保存位置”，否則保存每個文件時都會顯示另存為對話框。
+    <strong>建議您在瀏覽器的下載設置中關閉“下載前詢問每個文件的保存位置”，否則保存每個文件時都會顯示另存為對話框。</strong>
     <br><br>
     下載器默認開啟了一些增強功能，這可能會導致 Pixiv 的一些頁面樣式產生變化。您可以在下載器的“更多”標籤頁中啟用或關閉這些功能。
     <br><br>
@@ -3704,7 +3705,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     Downloaded files are saved in the browser's download directory. If you want to save them to another location, you need to change the browser's download directory.
     <br><br>
-    It is recommended to disable "Ask where to save each file before downloading" in the browser's download settings, otherwise a save-as dialog will appear for each file.
+    <strong>It is recommended to disable "Ask where to save each file before downloading" in the browser's download settings, otherwise a save-as dialog will appear for each file.</strong>
     <br><br>
     The downloader enables some enhanced features by default, which may cause changes to the style of some Pixiv pages. You can enable or disable these features in the "More" tab of the downloader.
     <br><br>
@@ -3715,7 +3716,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     ダウンロードしたファイルはブラウザのダウンロードディレクトリに保存されます。別の場所に保存したい場合は、ブラウザのダウンロードディレクトリを変更する必要があります。
     <br><br>
-    ブラウザのダウンロード設定で「ダウンロード前に各ファイルの保存場所を確認する」をオフにすることをお勧めします。そうしないと、ファイルを保存するたびに「名前を付けて保存」ダイアログが表示されます。
+    <strong>ブラウザのダウンロード設定で「ダウンロード前に各ファイルの保存場所を確認する」をオフにすることをお勧めします。そうしないと、ファイルを保存するたびに「名前を付けて保存」ダイアログが表示されます。</strong>
     <br><br>
     ダウンローダーはデフォルトでいくつかの拡張機能を有効にしており、これによりPixivの一部のページのスタイルが変更されることがあります。これらの機能は、ダウンローダーの「その他」タブで有効または無効にできます。
     <br><br>
@@ -3726,7 +3727,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     다운로드한 파일은 브라우저의 다운로드 디렉토리에 저장됩니다. 다른 위치에 저장하려면 브라우저의 다운로드 디렉토리를 변경해야 합니다.
     <br><br>
-    브라우저의 다운로드 설정에서 "다운로드 전에 각 파일의 저장 위치를 묻기"를 비활성화하는 것이 좋습니다. 그렇지 않으면 파일을 저장할 때마다 "다른 이름으로 저장" 대화 상자가 나타납니다.
+    <strong>브라우저의 다운로드 설정에서 "다운로드 전에 각 파일의 저장 위치를 묻기"를 비활성화하는 것이 좋습니다. 그렇지 않으면 파일을 저장할 때마다 "다른 이름으로 저장" 대화 상자가 나타납니다.</strong>
     <br><br>
     다운로더는 기본적으로 몇 가지 향상된 기능을 활성화하며, 이로 인해 Pixiv의 일부 페이지 스타일이 변경될 수 있습니다. 이러한 기능은 다운로더의 "더보기" 탭에서 활성화하거나 비활성화할 수 있습니다.
     <br><br>
@@ -3737,7 +3738,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     Загруженные файлы сохраняются в папке загрузок браузера. Если вы хотите сохранить их в другое место, необходимо изменить папку загрузок в настройках браузера.
     <br><br>
-    Рекомендуется отключить в настройках загрузки браузера опцию "Запрашивать место сохранения каждого файла перед загрузкой", иначе при сохранении каждого файла будет отображаться диалог "Сохранить как".
+    <strong>Рекомендуется отключить в настройках загрузки браузера опцию "Запрашивать место сохранения каждого файла перед загрузкой", иначе при сохранении каждого файла будет отображаться диалог "Сохранить как".</strong>
     <br><br>
     Загрузчик по умолчанию включает некоторые расширенные функции, которые могут привести к изменению стиля некоторых страниц Pixiv. Вы можете включать или отключать эти функции на вкладке "Ещё" в загрузчике.
     <br><br>
@@ -7657,133 +7658,87 @@ To prevent duplicate filenames, it is recommended to always add {series_id}.`,
     `수상 작품을 찾을 수 없습니다. 대회가 아직 종료되지 않았기 때문일 수 있습니다.`,
     `Не найдено ни одной победившей работы, возможно, потому что конкурс ещё не завершён.`,
   ],
-  _版本更新说明18_3_0: [
-    `<strong>🚀更换了把动图转换为 WebM 的库，大幅提升转换速度</strong>
-<br>
-感谢 <a href="https://github.com/hospotho" target="_blank">hospotho</a>
-<br>
-<br>
-<strong>✨鼠标光标移动到小说缩略图上时，下载器会显示快速下载按钮，点击即可下载这个小说或系列</strong>
-<br>
-<br>
-<strong>✨支持了比赛页面</strong>
-<br>
-<br>
-<strong>✨在“我的作品”页面里，可以导出作品数据到 CSV 文件</strong>
-<br>
-<br>
-<strong>✨在保存作品的元数据时，除了之前的 TXT 格式，还可以选择保存为 JSON 格式</strong>
-<br>
-<br>
-<strong>🐞Pixiv 最近修改了搜索页面，影响了下载器的一些功能，现已修复</strong>
-<br>
-<br>
-<strong>🐞修复了一些其他 BUG</strong>`,
-    `<strong>🚀更換了將動圖轉換為 WebM 的庫，大幅提升轉換速度</strong>
-<br>
-感謝 <a href="https://github.com/hospotho" target="_blank">hospotho</a>
-<br>
-<br>
-<strong>✨滑鼠游標移到小說縮圖上時，下載器會顯示快速下載按鈕，點擊即可下載此小說或系列</strong>
-<br>
-<br>
-<strong>✨支援了比賽頁面</strong>
-<br>
-<br>
-<strong>✨在「我的作品」頁面裡，可以將作品資料匯出為 CSV 檔案</strong>
-<br>
-<br>
-<strong>✨在儲存作品元數據時，除了之前的 TXT 格式，還可以選擇儲存為 JSON 格式</strong>
-<br>
-<br>
-<strong>🐞Pixiv 最近修改了搜尋頁面，影響了下載器的一些功能，現已修復</strong>
-<br>
-<br>
-<strong>🐞修復了一些其他 BUG</strong>`,
-    `<strong>🚀Switched to a new library for converting Ugoira to WebM, significantly improving conversion speed</strong>
-<br>
-Thanks to <a href="https://github.com/hospotho" target="_blank">hospotho</a>
-<br>
-<br>
-<strong>✨When hovering the mouse cursor over a novel thumbnail, the downloader shows a quick download button; click to download the novel or series</strong>
-<br>
-<br>
-<strong>✨Added support for contest pages</strong>
-<br>
-<br>
-<strong>✨On the "My Works" page, you can now export work data to a CSV file</strong>
-<br>
-<br>
-<strong>✨When saving work metadata, in addition to the previous TXT format, you can now choose to save in JSON format</strong>
-<br>
-<br>
-<strong>🐞Pixiv recently changed the search page, which affected some downloader features; this has now been fixed</strong>
-<br>
-<br>
-<strong>🐞Fixed some other bugs</strong>`,
-    `<strong>🚀Ugoira を WebM に変換するライブラリを変更し、変換速度を大幅に向上</strong>
-<br>
-<a href="https://github.com/hospotho" target="_blank">hospotho</a> に感謝
-<br>
-<br>
-<strong>✨小説のサムネイルにマウスカーソルを合わせると、ダウンロードツールがクイックダウンロードボタンを表示し、クリックでその小説またはシリーズをダウンロード可能</strong>
-<br>
-<br>
-<strong>✨コンテストページに対応しました</strong>
-<br>
-<br>
-<strong>✨「私の作品」ページで、作品データを CSV ファイルにエクスポート可能</strong>
-<br>
-<br>
-<strong>✨作品のメタデータを保存する際、従来の TXT 形式に加えて JSON 形式も選択可能</strong>
-<br>
-<br>
-<strong>🐞Pixiv が最近検索ページを変更したためダウンロードツールの一部の機能に影響が出ていましたが、修正済み</strong>
-<br>
-<br>
-<strong>🐞その他のいくつかのバグを修正</strong>`,
-    `<strong>🚀Ugoira를 WebM으로 변환하는 라이브러리를 변경하여 변환 속도를 대폭 향상</strong>
-<br>
-<a href="https://github.com/hospotho" target="_blank">hospotho</a>에게 감사
-<br>
-<br>
-<strong>✨소설 썸네일 위에 마우스 커서를 올리면 다운로더가 빠른 다운로드 버튼을 표시하며, 클릭하면 해당 소설 또는 시리즈를 다운로드할 수 있습니다</strong>
-<br>
-<br>
-<strong>✨콘테스트 페이지 지원 추가</strong>
-<br>
-<br>
-<strong>✨"내 작품" 페이지에서 작품 데이터를 CSV 파일로 내보내기 가능</strong>
-<br>
-<br>
-<strong>✨작품 메타데이터 저장 시 기존 TXT 형식 외에 JSON 형식도 선택 가능</strong>
-<br>
-<br>
-<strong>🐞Pixiv가 최근 검색 페이지를 변경하여 다운로더의 일부 기능에 영향을 주었으나 이제 수정 완료</strong>
-<br>
-<br>
-<strong>🐞기타 여러 버그 수정</strong>`,
-    `<strong>🚀Заменили библиотеку для конвертации Ugoira в WebM, значительно увеличив скорость конвертации</strong>
-<br>
-Спасибо <a href="https://github.com/hospotho" target="_blank">hospotho</a>
-<br>
-<br>
-<strong>✨При наведении курсора мыши на миниатюру романа загрузчик показывает кнопку быстрой загрузки; клик — и роман или серия скачивается</strong>
-<br>
-<br>
-<strong>✨Добавлена поддержка страниц конкурсов</strong>
-<br>
-<br>
-<strong>✨На странице «Мои работы» теперь можно экспортировать данные работ в CSV-файл</strong>
-<br>
-<br>
-<strong>✨При сохранении метаданных работы, помимо прежнего TXT-формата, теперь можно выбрать сохранение в формате JSON</strong>
-<br>
-<br>
-<strong>🐞Pixiv недавно изменил страницу поиска, что повлияло на некоторые функции загрузчика; теперь исправлено</strong>
-<br>
-<br>
-<strong>🐞Исправлены некоторые другие баги</strong>`,
+  _提示有些用户可能已经注销: [
+    `有些用户可能已经注销，所以实际上的用户数量会少一些。`,
+    `有些用戶可能已經註銷，所以實際上的用戶數量會少一些。`,
+    `Some users may have already deactivated their accounts, so the actual number of users will be slightly lower.`,
+    `一部のユーザーが退会している可能性があるため、実際のユーザー数は少し少なくなります。`,
+    `일부 사용자가 이미 탈퇴했을 수 있으므로 실제 사용자 수는 조금 더 적을 수 있습니다.`,
+    `Некоторые пользователи могли уже деактивировать аккаунты, поэтому фактическое количество пользователей будет немного меньше.`,
+  ],
+  _查找已注销的用户: [
+    `查找已注销的用户`,
+    `查找已註銷的用戶`,
+    `Find deactivated users`,
+    `退会済みユーザーを検索`,
+    `탈퇴한 사용자 찾기`,
+    `Поиск деактивированных/удалённых пользователей`,
+  ],
+  _检查是否有已注销的用户的说明: [
+    `该功能会检查你的关注列表，找出现在比之前少了哪些用户，然后检查他们是否注销了账号。<br>
+    Pixiv 不会显示被注销的用户，所以此功能依赖于下载器自己保存的历史关注数据（该数据保存在本地）。<br>
+    该数据最早会从该功能推出时（2026 年 3 月）开始保存；如果你在此日期之后才安装了下载器，那么下载器开始工作之后才会保存此数据。<br>
+    下载器只能检查到在此之后注销的用户。`,
+    `該功能會檢查你的關注列表，找出現在比之前少了哪些用戶，然後檢查他們是否註銷了帳號。<br>
+    Pixiv 不會顯示被註銷的用戶，所以此功能依賴於下載器自己保存的歷史關注資料（該資料保存在本地）。<br>
+    該資料最早會從該功能推出時（2026 年 3 月）開始保存；如果你在此日期之後才安裝了下載器，那麼下載器開始工作之後才會保存此資料。<br>
+    下載器只能檢查到在此之後註銷的用戶。`,
+    `This feature checks your following list to identify which users are now missing compared to before, and then checks if they have deactivated their accounts.<br>
+    Pixiv does not display deactivated users, so this feature relies on the historical following data saved locally by the downloader itself.<br>
+    This data starts being saved from when the feature was released (March 2026) at the earliest; if you installed the downloader after this date, the data will only start being saved after the downloader begins working.<br>
+    The downloader can only detect users who deactivated after this point.`,
+    `この機能はあなたのフォロー一覧をチェックし、現在前回よりも減ったユーザーを特定した後、それらのユーザーがアカウントを退会したかどうかを確認します。<br>
+    Pixiv は退会したユーザーを表示しないため、この機能はダウンロードツール自身がローカルに保存している履歴フォローデータに依存します。<br>
+    このデータは最も早くてもこの機能がリリースされた時点（2026年3月）から保存が開始されます。この日付以降にダウンロードツールをインストールした場合、ダウンロードツールが動作を開始した時点からデータの保存が始まります。<br>
+    ダウンロードツールはこの日付以降に退会したユーザーのみ検出可能です。`,
+    `이 기능은 팔로잉 목록을 확인하여 이전보다 줄어든 사용자를 찾아내고, 해당 사용자가 계정을 탈퇴했는지 확인합니다.<br>
+    Pixiv는 탈퇴한 사용자를 표시하지 않으므로 이 기능은 다운로더가 자체적으로 로컬에 저장한 과거 팔로잉 데이터에 의존합니다.<br>
+    이 데이터는 가장 빠른 경우 해당 기능 출시 시점(2026년 3월)부터 저장되기 시작하며, 이 날짜 이후에 다운로더를 설치했다면 다운로더가 작동을 시작한 이후부터 데이터가 저장됩니다.<br>
+    다운로더는 이 시점 이후에 탈퇴한 사용자만 확인할 수 있습니다.`,
+    `Эта функция проверяет ваш список подписок, определяет, какие пользователи теперь отсутствуют по сравнению с предыдущим состоянием, а затем проверяет, деактивировали ли они аккаунт.<br>
+    Pixiv не показывает деактивированных пользователей, поэтому функция полагается на историю подписок, сохранённую локально самим загрузчиком.<br>
+    Эти данные начинают сохраняться не раньше даты выпуска функции (март 2026 года); если вы установили загрузчик позже этой даты, то данные начнут сохраняться только после того, как загрузчик начал работу.<br>
+    Загрузчик может обнаружить только тех пользователей, которые деактивировали аккаунт после этой даты.`,
+  ],
+  _检查用户x是否已注销: [
+    `检查用户 {} 是否已注销`,
+    `檢查用戶 {} 是否已註銷`,
+    `Check if user {} has deactivated`,
+    `ユーザー {} が退会済みか確認`,
+    `사용자 {} 가 탈퇴했는지 확인`,
+    `Проверить, деактивирован ли пользователь {}`,
+  ],
+  _该用户已注销: [
+    `该用户已注销`,
+    `該用戶已註銷`,
+    `This user has deactivated`,
+    `このユーザーは退会済みです`,
+    `이 사용자는 탈퇴했습니다`,
+    `Этот пользователь деактивирован`,
+  ],
+  _该用户未注销: [
+    `该用户未注销`,
+    `該用戶未註銷`,
+    `This user has not deactivated`,
+    `このユーザーは退会していません`,
+    `이 사용자는 탈퇴하지 않았습니다`,
+    `Этот пользователь не деактивирован`,
+  ],
+  _已注销用户数量: [
+    `已注销用户数量`,
+    `已註銷用戶數量`,
+    `Number of deactivated users`,
+    `退会済みユーザーの数`,
+    `탈퇴한 사용자 수`,
+    `Количество деактивированных пользователей`,
+  ],
+  _没有找到已注销的用户: [
+    `没有找到已注销的用户`,
+    `沒有找到已註銷的用戶`,
+    `No deactivated users found`,
+    `退会済みユーザーは見つかりませんでした`,
+    `탈퇴한 사용자를 찾을 수 없습니다`,
+    `Не найдено удалённых/деактивированных пользователей`,
   ],
 }
 

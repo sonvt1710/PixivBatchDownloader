@@ -181,7 +181,7 @@ class Utils {
 
   // 判断当前页面是否属于 pixiv.net
   static isPixiv() {
-    return window.location.host.endsWith('.pixiv.net')
+    return location.host.endsWith('.pixiv.net')
   }
 
   /** 从 url 中获取指定的查询字段的值 */

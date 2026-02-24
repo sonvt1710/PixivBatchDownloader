@@ -1374,10 +1374,10 @@ class API {
         return this.fetch(url);
     }
     // 获取用户信息
-    static getUserProfile(id) {
+    static getUserProfile(id, full = '1') {
         // full=1 在画师的作品列表页使用，获取详细信息
         // full=0 在作品页内使用，只获取少量信息
-        const url = `https://www.pixiv.net/ajax/user/${id}?full=1`;
+        const url = `https://www.pixiv.net/ajax/user/${id}?full=${full}`;
         return this.fetch(url);
     }
     // 获取用户指定类型的作品列表
@@ -2711,7 +2711,7 @@ class Config {
     /**浏览器是否处于移动端模式 */
     static mobile = navigator.userAgent.includes('Mobile');
     /**检测 Firefox 浏览器 */
-    static isFirefox = window.navigator.userAgent.includes('Firefox');
+    static isFirefox = navigator.userAgent.includes('Firefox');
     static sendBlob = this.isFirefox;
     /** 在 Chrome 的隐私窗口里下载时，需要把 blob 对象转换为 dataURL 发送给后台。
      * 不能直接传递 blob，因为这样后台 service worker 里接收时变成了空对象，无法使用。
@@ -3415,6 +3415,138 @@ class CopyWorkInfo {
     }
 }
 const copyWorkInfo = new CopyWorkInfo();
+
+
+
+/***/ }),
+
+/***/ "./src/ts/DeletedFollowingUserView.ts":
+/*!********************************************!*\
+  !*** ./src/ts/DeletedFollowingUserView.ts ***!
+  \********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   deletedFollowingUserView: () => (/* binding */ deletedFollowingUserView)
+/* harmony export */ });
+/* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! webextension-polyfill */ "./node_modules/webextension-polyfill/dist/browser-polyfill.js");
+/* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _store_Store__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./store/Store */ "./src/ts/store/Store.ts");
+/* harmony import */ var _MsgBox__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./MsgBox */ "./src/ts/MsgBox.ts");
+/* harmony import */ var _Language__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Language */ "./src/ts/Language.ts");
+/* harmony import */ var _FollowingList__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./FollowingList */ "./src/ts/FollowingList.ts");
+/* harmony import */ var _Log__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./Log */ "./src/ts/Log.ts");
+/* harmony import */ var _utils_Utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./utils/Utils */ "./src/ts/utils/Utils.ts");
+/* harmony import */ var _API__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./API */ "./src/ts/API.ts");
+/* harmony import */ var _Toast__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./Toast */ "./src/ts/Toast.ts");
+/* harmony import */ var _EVT__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./EVT */ "./src/ts/EVT.ts");
+/* harmony import */ var _setting_Settings__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./setting/Settings */ "./src/ts/setting/Settings.ts");
+/* harmony import */ var _Tools__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./Tools */ "./src/ts/Tools.ts");
+
+
+
+
+
+
+
+
+
+
+
+
+class DeletedFollowingUserView {
+    constructor() {
+        // ManageFollowing 派发关注数据时，保存 deletedUsers 到这个类的副本里备用
+        webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().runtime.onMessage.addListener((msg, sender, sendResponse) => {
+            const m = msg;
+            if (m.msg === 'dispathFollowingData') {
+                const deletedUsers = m.data?.find((data) => data.user === _store_Store__WEBPACK_IMPORTED_MODULE_1__.store.loggedUserID)?.deletedUsers;
+                if (deletedUsers) {
+                    this.deletedUsers = deletedUsers;
+                    console.log('deletedUsers：', this.deletedUsers);
+                }
+            }
+        });
+    }
+    // 从 FollowingData 里保存 deletedUsers 的副本便于使用
+    deletedUsers = [];
+    async check() {
+        const tip = _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_查找已注销的用户');
+        _EVT__WEBPACK_IMPORTED_MODULE_9__.EVT.fire('closeCenterPanel');
+        _Toast__WEBPACK_IMPORTED_MODULE_8__.toast.show(tip);
+        _Log__WEBPACK_IMPORTED_MODULE_5__.log.warning('🚀' + tip);
+        _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_检查是否有已注销的用户的说明'));
+        // 等待数据更新和派发完成
+        await _FollowingList__WEBPACK_IMPORTED_MODULE_4__.followingList.getList();
+        await _utils_Utils__WEBPACK_IMPORTED_MODULE_6__.Utils.sleep(1000);
+        // 检查已经不存在于关注列表里，并且不是用户手动取消关注的用户
+        const needCheck = this.deletedUsers.filter((user) => user.deleteByUser === false);
+        if (this.deletedUsers.length === 0 || needCheck.length === 0) {
+            this.tipNoResult();
+            this.tipComplete();
+            return;
+        }
+        const deactivatedUsers = [];
+        for (const user of needCheck) {
+            // 之前已经确定注销了的用户
+            if (!user.exist) {
+                deactivatedUsers.push(user);
+            }
+            else {
+                // 检查用户是否已注销
+                const link = _Tools__WEBPACK_IMPORTED_MODULE_11__.Tools.createUserLink(user.id, user.name);
+                _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_检查用户x是否已注销', link));
+                const json = await _API__WEBPACK_IMPORTED_MODULE_7__.API.getUserProfile(user.id, '0');
+                if (json.error) {
+                    user.exist = false;
+                    deactivatedUsers.push(user);
+                    _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_该用户已注销'));
+                }
+                else {
+                    _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_该用户未注销'));
+                }
+                await _utils_Utils__WEBPACK_IMPORTED_MODULE_6__.Utils.sleep(_setting_Settings__WEBPACK_IMPORTED_MODULE_10__.settings.slowCrawlDealy);
+            }
+        }
+        // 调试用：输出未注销的用户，这是为了在没有已注销用户时也能输出结果，以便检查样式
+        // this.output(needCheck.filter(user => user.exist))
+        if (deactivatedUsers.length === 0) {
+            this.tipNoResult();
+        }
+        else {
+            this.output(deactivatedUsers);
+        }
+        this.tipComplete();
+    }
+    output(users) {
+        _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_已注销用户数量') + `: ${users.length}`);
+        for (const user of users) {
+            let img = '';
+            // 输出头像、id、名字
+            if (user.avatar) {
+                img = `<img src="${user.avatar}" width="50" height="50" style="vertical-align: middle; border-radius: 50%; margin-right: 10px;">`;
+            }
+            const html = `<a href="https://www.pixiv.net/users/${user.id}" target="_blank">
+        ${img}
+        <span style="margin-right: 10px;">${user.id}</span>
+        <span style="margin-right: 10px;">${user.name}</span>
+        </a>`;
+            _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(html, 2);
+        }
+    }
+    tipNoResult() {
+        const msg = _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_没有找到已注销的用户');
+        _MsgBox__WEBPACK_IMPORTED_MODULE_2__.msgBox.warning(msg);
+        _Log__WEBPACK_IMPORTED_MODULE_5__.log.warning(msg);
+    }
+    tipComplete() {
+        const msg = '✅' + _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_查找已注销的用户');
+        _Log__WEBPACK_IMPORTED_MODULE_5__.log.success(msg);
+    }
+}
+const deletedFollowingUserView = new DeletedFollowingUserView();
 
 
 
@@ -4134,26 +4266,27 @@ const fileName = new FileName();
 
 /***/ }),
 
-/***/ "./src/ts/HighlightFollowingUsers.ts":
-/*!*******************************************!*\
-  !*** ./src/ts/HighlightFollowingUsers.ts ***!
-  \*******************************************/
+/***/ "./src/ts/FollowingList.ts":
+/*!*********************************!*\
+  !*** ./src/ts/FollowingList.ts ***!
+  \*********************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   followingList: () => (/* binding */ followingList)
+/* harmony export */ });
 /* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! webextension-polyfill */ "./node_modules/webextension-polyfill/dist/browser-polyfill.js");
 /* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _API__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./API */ "./src/ts/API.ts");
 /* harmony import */ var _EVT__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./EVT */ "./src/ts/EVT.ts");
-/* harmony import */ var _PageType__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./PageType */ "./src/ts/PageType.ts");
-/* harmony import */ var _Tools__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./Tools */ "./src/ts/Tools.ts");
+/* harmony import */ var _Language__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Language */ "./src/ts/Language.ts");
+/* harmony import */ var _setting_Settings__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./setting/Settings */ "./src/ts/setting/Settings.ts");
 /* harmony import */ var _store_Store__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./store/Store */ "./src/ts/store/Store.ts");
-/* harmony import */ var _utils_Utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./utils/Utils */ "./src/ts/utils/Utils.ts");
-/* harmony import */ var _setting_Settings__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./setting/Settings */ "./src/ts/setting/Settings.ts");
-/* harmony import */ var _Toast__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./Toast */ "./src/ts/Toast.ts");
-/* harmony import */ var _Language__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./Language */ "./src/ts/Language.ts");
-/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./Config */ "./src/ts/Config.ts");
+/* harmony import */ var _Toast__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./Toast */ "./src/ts/Toast.ts");
+/* harmony import */ var _utils_Utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./utils/Utils */ "./src/ts/utils/Utils.ts");
+/* harmony import */ var _Log__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./Log */ "./src/ts/Log.ts");
 
 
 
@@ -4163,47 +4296,25 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
-
-// 备注：
-// 有个 API 也可以获取关注总数量，即获取用户在 PC 端页面的额外数据：
-// https://www.pixiv.net/ajax/user/extra?is_smartphone=0&lang=zh
-// 包含已关注数量、粉丝数量、好 P 友数量
-class HighlightFollowingUsers {
+// 更新关注列表
+class FollowingList {
     constructor() {
-        if (!_utils_Utils__WEBPACK_IMPORTED_MODULE_6__.Utils.isPixiv()) {
+        if (!_utils_Utils__WEBPACK_IMPORTED_MODULE_7__.Utils.isPixiv()) {
             return;
         }
         this.delayCheckUpdate();
-        window.setTimeout(() => {
-            this.startMutationObserver();
-        }, 0);
         webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().runtime.onMessage.addListener((msg, sender, sendResponse) => {
             if (!this.isMsg(msg)) {
                 return false;
             }
             if (msg.msg === 'dispathFollowingData') {
                 this.receiveData(msg.data || []);
-                _EVT__WEBPACK_IMPORTED_MODULE_2__.EVT.fire('followingUsersChange');
             }
             if (msg.msg === 'updateFollowingData') {
                 if (!_store_Store__WEBPACK_IMPORTED_MODULE_5__.store.loggedUserID) {
                     return;
                 }
-                this.getList().then((list) => {
-                    console.log(_Language__WEBPACK_IMPORTED_MODULE_9__.lang.transl('_已更新关注用户列表'));
-                    _Toast__WEBPACK_IMPORTED_MODULE_8__.toast.success(_Language__WEBPACK_IMPORTED_MODULE_9__.lang.transl('_已更新关注用户列表'), {
-                        position: 'topCenter',
-                    });
-                    webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().runtime.sendMessage({
-                        msg: 'setFollowingData',
-                        data: {
-                            user: _store_Store__WEBPACK_IMPORTED_MODULE_5__.store.loggedUserID,
-                            following: list,
-                            total: this.total,
-                        },
-                    });
-                });
+                this.getList();
             }
             if (msg.msg === 'getLoggedUserID') {
                 sendResponse({ loggedUserID: _store_Store__WEBPACK_IMPORTED_MODULE_5__.store.loggedUserID });
@@ -4214,89 +4325,56 @@ class HighlightFollowingUsers {
                 msg: 'requestFollowingData',
             });
         }
-        // 每当下载器获取了页面的主题颜色时
-        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_2__.EVT.list.getPageTheme, (ev) => {
-            if (ev.detail.data) {
-                if (this.pageTheme !== ev.detail.data) {
-                    // 当用户改变页面主题时，一些页面元素会重新生成，但是目前的代码不能监听到这个变化
-                    // 所以需要来更新高亮状态
-                    window.setTimeout(() => {
-                        this.makeHighlight();
-                    }, 0);
-                }
-                this.pageTheme = ev.detail.data;
-                // 给 html 标签添加自定义 data 属性，这是因为原本的 html 标签在没有任何 data 属性的时候，
-                // 可能是普通模式，也可能是夜间模式，所以下载器必须自行添加一个属性，
-                // 才能让高亮样式在不同模式中有不同的效果
-                document.documentElement.setAttribute('data-xzpagetheme', this.pageTheme);
-            }
-        });
-        // 在作品页内，切换到另一个作者的作品时，作者名字会变化，需要重新设置高亮状态
-        // 但是监视器无法监测到变化，尤其是右侧的名字，所以使用定时器执行
-        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_2__.EVT.list.pageSwitch, () => {
-            if (!_Config__WEBPACK_IMPORTED_MODULE_10__.Config.mobile &&
-                (_PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.list.Artwork ||
-                    _PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.list.Novel)) {
-                let time = 0;
-                let interval = 500;
-                let timer = window.setInterval(() => {
-                    time = time + interval;
-                    if (time > 5000) {
-                        window.clearInterval(timer);
-                    }
-                    const leftA = document.querySelectorAll('main section a[href*=user]');
-                    const rightA = document.querySelectorAll('main+aside a[href*=user]');
-                    const allA = Array.from(leftA).concat(Array.from(rightA));
-                    this.makeHighlight(allA);
-                }, interval);
-            }
-        });
-        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_2__.EVT.list.settingChange, (ev) => {
-            const data = ev.detail.data;
-            if (data.name === 'highlightFollowingUsers') {
-                if (!data.value) {
-                    this.clearHighlight();
-                }
-                else {
-                    this.makeHighlight();
-                }
-            }
-        });
     }
-    // 类型守卫
+    /**当前登录用户的关注用户列表 */
+    following = [];
+    /**当前登录用户的关注用户总数，也就是 pixiv 页面上显示的公开关注 + 非公开关注数量之和。
+     * 这不一定是实际关注数量（也就是不一定等于 this.following.length)，因为有些用户可能已经注销了，所以实际关注数量比显示的数量少是很常见的 */
+    total = 0;
+    checkUpdateTimer;
+    status = 'idle';
+    // 类型守卫，只要求消息有 msg 属性
     isMsg(msg) {
         return !!msg.msg;
     }
-    pageTheme = '';
-    /**当前登录用户的关注用户列表 */
-    following = [];
-    /**当前登录用户的关注用户总数 */
-    total = 0;
-    checkUpdateTimer;
-    highlightClassName = 'pbdHighlightFollowing';
-    async receiveData(list) {
-        const thisUserData = list.find((data) => data.user === _store_Store__WEBPACK_IMPORTED_MODULE_5__.store.loggedUserID);
-        if (thisUserData) {
-            this.following = thisUserData.following;
-            _store_Store__WEBPACK_IMPORTED_MODULE_5__.store.followingUserIDList = this.following;
-            this.total = thisUserData.total;
-            this.makeHighlight();
-        }
-        else {
-            // 恢复的数据里没有当前用户的数据，需要获取
-            this.checkNeedUpdate();
-        }
-    }
     /**全量获取当前用户的所有关注列表 */
+    // 这个方法会在关注数量与已储存的关注数据里的数量不一致时自动执行，以更新储存的关注数据。
+    // 如果在某些时候想强制更新，可以调用这个方法
     async getList() {
-        _Toast__WEBPACK_IMPORTED_MODULE_8__.toast.show(_Language__WEBPACK_IMPORTED_MODULE_9__.lang.transl('_正在加载关注用户列表'), {
+        if (this.status === 'locked') {
+            return new Promise((resolve) => {
+                this.queue.push(() => {
+                    resolve(this.following);
+                });
+            });
+        }
+        this.status = 'locked';
+        const tip1 = _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_正在加载关注用户列表');
+        _Log__WEBPACK_IMPORTED_MODULE_8__.log.warning(tip1);
+        _Toast__WEBPACK_IMPORTED_MODULE_6__.toast.show(tip1, {
             position: 'topCenter',
         });
-        // 需要获取公开关注和私密关注
+        // 获取公开关注和私密关注，然后合并
         const publicList = await this.getFollowingList('show');
         const privateList = await this.getFollowingList('hide');
         const followingIDList = publicList.concat(privateList);
-        return followingIDList;
+        this.following = followingIDList;
+        const tip2 = _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_已更新关注用户列表');
+        _Log__WEBPACK_IMPORTED_MODULE_8__.log.success(tip2);
+        _Toast__WEBPACK_IMPORTED_MODULE_6__.toast.success(tip2, {
+            position: 'topCenter',
+        });
+        webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().runtime.sendMessage({
+            msg: 'setFollowingData',
+            data: {
+                user: _store_Store__WEBPACK_IMPORTED_MODULE_5__.store.loggedUserID,
+                following: followingIDList,
+                total: this.total,
+            },
+        });
+        this.executeQueue();
+        this.status = 'idle';
+        return this.following;
     }
     /**获取公开或私密关注的用户 ID 列表 */
     async getFollowingList(rest) {
@@ -4314,23 +4392,48 @@ class HighlightFollowingUsers {
             for (const users of res.body.users) {
                 ids.push(users.userId);
             }
+            const type = rest === 'show' ? _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_公开') : _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_非公开');
+            _Log__WEBPACK_IMPORTED_MODULE_8__.log.log(`${type} ${ids.length} / ${total}`, 1, false, `getFollowingList_${rest}`);
             if (res.body.users.length === 0) {
                 // 实际获取到的关注用户数量可能比 total 少，这是正常的
                 // 例如 toal 是 3522，实际上获取到的可能是 3483 个，再往后都是空数组了
+                _Log__WEBPACK_IMPORTED_MODULE_8__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_提示有些用户可能已经注销'), 1, false, 'tipUserMayDeactivated');
                 break;
             }
-            await _utils_Utils__WEBPACK_IMPORTED_MODULE_6__.Utils.sleep(_setting_Settings__WEBPACK_IMPORTED_MODULE_7__.settings.slowCrawlDealy);
+            await _utils_Utils__WEBPACK_IMPORTED_MODULE_7__.Utils.sleep(_setting_Settings__WEBPACK_IMPORTED_MODULE_4__.settings.slowCrawlDealy);
         }
         return ids;
     }
-    /**只请求第一页的数据，以获取 total */
+    /**只请求关注列表第一页的数据，以获取 total */
     async getFollowingTotal(rest) {
         // 关注页面一页显示 24 个作者
         const res = await _API__WEBPACK_IMPORTED_MODULE_1__.API.getFollowingList(_store_Store__WEBPACK_IMPORTED_MODULE_5__.store.loggedUserID, rest, '', 0, 24);
         return res.body.total;
     }
+    async receiveData(list) {
+        // console.log('receiveData', list)
+        const data = list.find((data) => data.user === _store_Store__WEBPACK_IMPORTED_MODULE_5__.store.loggedUserID);
+        if (data) {
+            this.following = data.following;
+            this.total = data.total;
+            // console.log('receiveData total', this.total)
+            this.executeUpdateCB();
+        }
+        else {
+            // 恢复的数据里没有当前用户的数据，需要获取
+            this.checkNeedUpdate();
+        }
+        _EVT__WEBPACK_IMPORTED_MODULE_2__.EVT.fire('followingUsersChange');
+    }
+    async delayCheckUpdate() {
+        window.clearTimeout(this.checkUpdateTimer);
+        this.checkUpdateTimer = window.setTimeout(async () => {
+            this.checkNeedUpdate();
+            return this.delayCheckUpdate();
+        }, this.getUpdateTime());
+    }
     getUpdateTime() {
-        // 每次检查更新的最低时间间隔是 5 分钟
+        // 每次检查更新的最低时间间隔是 5 分钟，最多是 15 分钟
         // 如果用户打开了多个标签页，它们都会加载关注列表的第一页来检查数量
         // 所以间隔不宜太短
         const base = 300000;
@@ -4340,28 +4443,22 @@ class HighlightFollowingUsers {
         // 因为多个标签页里只要有一个更新了数据，所有的标签页都会得到新数据
         return base + random;
     }
-    async delayCheckUpdate() {
-        window.clearTimeout(this.checkUpdateTimer);
-        this.checkUpdateTimer = window.setTimeout(async () => {
-            this.checkNeedUpdate();
-            return this.delayCheckUpdate();
-        }, this.getUpdateTime());
-    }
     /**检查关注用户的数量，如果数量发生变化则执行全量更新 */
     async checkNeedUpdate() {
         // 在搜索页面里移除已关注用户的作品 功能依赖关注用户列表，所以如果用户启用了该功能，也需要更新关注列表
-        if (!_setting_Settings__WEBPACK_IMPORTED_MODULE_7__.settings.highlightFollowingUsers &&
-            !_setting_Settings__WEBPACK_IMPORTED_MODULE_7__.settings.removeWorksOfFollowedUsersOnSearchPage) {
+        if (!_setting_Settings__WEBPACK_IMPORTED_MODULE_4__.settings.highlightFollowingUsers &&
+            !_setting_Settings__WEBPACK_IMPORTED_MODULE_4__.settings.removeWorksOfFollowedUsersOnSearchPage) {
             return;
         }
         // 因为本程序不区分公开和非公开关注，所以只储存总数
         let newTotal = 0;
-        for (const rest of ['show', 'hide']) {
+        const type = ['show', 'hide'];
+        for (const rest of type) {
             const total = await this.getFollowingTotal(rest);
             newTotal = newTotal + total;
         }
         if (newTotal !== this.total) {
-            // console.log(`关注用户总数量变化 ${this.total} -> ${newTotal}`)
+            console.log(`关注用户总数量变化 ${this.total} -> ${newTotal}，请求更新关注列表`);
             this.total = newTotal;
             webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().runtime.sendMessage({
                 msg: 'needUpdateFollowingData',
@@ -4369,13 +4466,126 @@ class HighlightFollowingUsers {
             });
         }
     }
+    // 等待队列
+    queue = [];
+    executeQueue() {
+        while (this.queue.length > 0) {
+            const func = this.queue.shift();
+            func();
+        }
+    }
+    // 当关注列表全量更新时，执行回调函数
+    onUpdateCB = [];
+    onUpdate(cb) {
+        this.onUpdateCB.push(cb);
+    }
+    executeUpdateCB() {
+        for (const cb of this.onUpdateCB) {
+            cb();
+        }
+    }
+}
+const followingList = new FollowingList();
+
+
+
+/***/ }),
+
+/***/ "./src/ts/HighlightFollowingUsers.ts":
+/*!*******************************************!*\
+  !*** ./src/ts/HighlightFollowingUsers.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _EVT__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./EVT */ "./src/ts/EVT.ts");
+/* harmony import */ var _PageType__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./PageType */ "./src/ts/PageType.ts");
+/* harmony import */ var _Tools__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Tools */ "./src/ts/Tools.ts");
+/* harmony import */ var _utils_Utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils/Utils */ "./src/ts/utils/Utils.ts");
+/* harmony import */ var _setting_Settings__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./setting/Settings */ "./src/ts/setting/Settings.ts");
+/* harmony import */ var _Config__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./Config */ "./src/ts/Config.ts");
+/* harmony import */ var _FollowingList__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./FollowingList */ "./src/ts/FollowingList.ts");
+
+
+
+
+
+
+
+// 备注：
+// 有个 API 也可以获取关注总数量，即获取用户在 PC 端页面的额外数据：
+// https://www.pixiv.net/ajax/user/extra?is_smartphone=0&lang=zh
+// 包含已关注数量、粉丝数量、好 P 友数量
+class HighlightFollowingUsers {
+    constructor() {
+        if (!_utils_Utils__WEBPACK_IMPORTED_MODULE_3__.Utils.isPixiv()) {
+            return;
+        }
+        _FollowingList__WEBPACK_IMPORTED_MODULE_6__.followingList.onUpdate(() => {
+            this.makeHighlight();
+        });
+        window.setTimeout(() => {
+            this.startMutationObserver();
+        }, 0);
+        // 每当下载器获取了页面的主题颜色时
+        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_0__.EVT.list.getPageTheme, (ev) => {
+            if (ev.detail.data) {
+                if (this.pageTheme !== ev.detail.data) {
+                    // 当用户改变页面主题时，一些页面元素会重新生成，但是目前的代码不能监听到这个变化
+                    // 所以需要来更新高亮状态
+                    window.setTimeout(() => {
+                        this.makeHighlight();
+                    }, 0);
+                }
+                this.pageTheme = ev.detail.data;
+                // 给 html 标签添加自定义 data 属性，这是因为原本的 html 标签在没有任何 data 属性的时候，
+                // 可能是普通模式，也可能是夜间模式，所以下载器必须自行添加一个属性，
+                // 才能让高亮样式在不同模式中有不同的效果
+                document.documentElement.setAttribute('data-xzpagetheme', this.pageTheme);
+            }
+        });
+        // 在作品页内，切换到另一个作者的作品时，作者名字会变化，需要重新设置高亮状态
+        // 但是监视器无法监测到变化，尤其是右侧的名字，所以使用定时器执行
+        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_0__.EVT.list.pageSwitch, () => {
+            if (!_Config__WEBPACK_IMPORTED_MODULE_5__.Config.mobile &&
+                (_PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.list.Artwork ||
+                    _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.list.Novel)) {
+                let time = 0;
+                let interval = 500;
+                let timer = window.setInterval(() => {
+                    time = time + interval;
+                    if (time > 5000) {
+                        window.clearInterval(timer);
+                    }
+                    const leftA = document.querySelectorAll('main section a[href*=user]');
+                    const rightA = document.querySelectorAll('main+aside a[href*=user]');
+                    const allA = Array.from(leftA).concat(Array.from(rightA));
+                    this.makeHighlight(allA);
+                }, interval);
+            }
+        });
+        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_0__.EVT.list.settingChange, (ev) => {
+            const data = ev.detail.data;
+            if (data.name === 'highlightFollowingUsers') {
+                if (!data.value) {
+                    this.clearHighlight();
+                }
+                else {
+                    this.makeHighlight();
+                }
+            }
+        });
+    }
+    pageTheme = '';
+    highlightClassName = 'pbdHighlightFollowing';
     // 检查包含用户 id 的链接，并且需要以 id 结束
     // 这是因为 id 之后还有字符的链接是不需要的，例如：
     // https://www.pixiv.net/en/users/17207914/artworks
     // 下载器只匹配用户主页的链接，不匹配用户子页面的链接
     checkUserLinkReg = /\/users\/(\d+)$/;
     makeHighlight(aList) {
-        if (!_setting_Settings__WEBPACK_IMPORTED_MODULE_7__.settings.highlightFollowingUsers) {
+        if (!_setting_Settings__WEBPACK_IMPORTED_MODULE_4__.settings.highlightFollowingUsers) {
             return;
         }
         // 这里不需要检查 this.followingList.length === 0 的情况
@@ -4386,11 +4596,11 @@ class HighlightFollowingUsers {
             let match = false;
             if (a.href) {
                 // 小说排行榜里的用户链接普遍带有 /novels 后缀，所以不要求以用户 id 结尾
-                const test = a.href.match(_PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.list.NovelRanking
+                const test = a.href.match(_PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.list.NovelRanking
                     ? /\/users\/(\d+)/
                     : this.checkUserLinkReg);
                 if (test && test.length > 1) {
-                    match = this.following.includes(test[1]);
+                    match = _FollowingList__WEBPACK_IMPORTED_MODULE_6__.followingList.following.includes(test[1]);
                     // 要高亮的元素
                     let target = a;
                     // 如果用户链接的 a 标签包含子元素，则将 className 添加到它的某个子元素上
@@ -4402,8 +4612,8 @@ class HighlightFollowingUsers {
                         target = a.firstChild;
                     }
                     // 在某些页面里高亮最后一个子元素
-                    if (_PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.list.ArtworkRanking ||
-                        _PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.list.AreaRanking) {
+                    if (_PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.list.ArtworkRanking ||
+                        _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.list.AreaRanking) {
                         if (a.lastChild && a.lastChild.nodeType === 1) {
                             target = a.lastChild;
                         }
@@ -4453,16 +4663,16 @@ class HighlightFollowingUsers {
         });
     }
     handleUserHomePage() {
-        if (_PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_3__.pageType.list.UserHome) {
+        if (_PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.type === _PageType__WEBPACK_IMPORTED_MODULE_1__.pageType.list.UserHome) {
             // 在用户主页里，高亮用户名（因为用户名没有超链接，需要单独处理）
-            const userID = _Tools__WEBPACK_IMPORTED_MODULE_4__.Tools.getCurrentPageUserID();
-            const flag = this.following.includes(userID);
+            const userID = _Tools__WEBPACK_IMPORTED_MODULE_2__.Tools.getCurrentPageUserID();
+            const flag = _FollowingList__WEBPACK_IMPORTED_MODULE_6__.followingList.following.includes(userID);
             const h1 = document.querySelector('h1');
             if (h1) {
                 h1.classList[flag ? 'add' : 'remove'](this.highlightClassName);
             }
             // 取消用户主页里“主页”按钮的高亮，它具有用户主页链接，但它不是用户名
-            const selector = _Config__WEBPACK_IMPORTED_MODULE_10__.Config.mobile ? '.v-nav-tabs a' : 'nav a';
+            const selector = _Config__WEBPACK_IMPORTED_MODULE_5__.Config.mobile ? '.v-nav-tabs a' : 'nav a';
             const homeBtn = document.querySelector(selector);
             if (homeBtn) {
                 homeBtn.classList.remove(this.highlightClassName);
@@ -10129,7 +10339,6 @@ class ShowWhatIsNew {
       <span>${_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_扩展程序升到x版本', this.flag)}</span>
       <br>
       <br>
-      <span>${_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_版本更新说明18_3_0')}</span>
       <br>
       <br>
       <span>${_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_优化用户体验')}</span>
@@ -11246,10 +11455,11 @@ class Tools {
      * @param userID 用户 id
      * @returns 超链接（A 标签）
      */
-    static createUserLink(userID) {
+    static createUserLink(userID, userName = '') {
         const idNum = typeof userID === 'number' ? userID : Number.parseInt(userID);
         const href = `https://www.pixiv.net/users/${idNum}`;
-        return `<a href="${href}" target="_blank">${idNum}</a>`;
+        // 如果传入了 userName，则使用 userName 作为链接文本，否则使用 id 作为链接文本
+        return `<a href="${href}" target="_blank">${userName || idNum}</a>`;
     }
     // 简介里的链接目前有这 3 种，其中站内链接缩写需要替换成完整的 URL，否则将其转换为文本时，只会留下缩写，丢失了链接。
     // 1. 站内作品链接，但是 a 标签内的字符并不是链接本身，而是缩写。需要处理
@@ -15456,14 +15666,17 @@ class InitSearchArtworkPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE
             document.querySelector('section h3+div span') ||
                 document.querySelector('div[data-ga4-label="works_content"]>div:first-child div:first-child span span');
     }
-    // 组织要请求的 url 中的参数
+    // 初始化 API 里要使用的参数
     initFetchURL() {
         // 从 URL 中获取发起请求时的分类路径
         let APIPath = 'illustrations';
-        if (location.pathname.startsWith('/tags')) {
-            // 如果是 /tags 开头的 URL，分类路径在搜索词后面，例如
+        const path = location.pathname;
+        if (path.includes('/tags/')) {
+            // 如果是包含 /tags/ 的 URL，分类路径在搜索词后面，例如：
             // https://www.pixiv.net/tags/Fate%2FGrandOrder/illustrations
-            APIPath = location.pathname.split('tags/')[1].split('/')[1] ?? 'artworks';
+            // 注意：这里的判断需要用 includes 而不是 startsWith，因为当 Pixiv 的页面语言为英语时， /tags 前面会有 /en
+            // /search 前面则始终不会有 /en
+            APIPath = path.split('tags/')[1].split('/')[1] ?? 'artworks';
             // 在“顶部”页面的时候，URL 里是没有分类的，会是 undefined，此时使用代表“顶部”的 'artworks'
         }
         else {
@@ -15505,7 +15718,6 @@ class InitSearchArtworkPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE
                     this.option[param] = value;
                 }
                 if (param === 'type') {
-                    const path = location.pathname;
                     if (path.startsWith('/search')) {
                         // 虽然 URL 里的 type 是 illust_ugoira，但查询时要使用 illust_and_ugoira
                         // https://www.pixiv.net/search?q=%E5%8E%9F%E7%A5%9E&s_mode=tag&type=illust_ugoira
@@ -15514,7 +15726,7 @@ class InitSearchArtworkPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE
                             this.option[param] = 'illust_and_ugoira';
                         }
                     }
-                    if (path.startsWith('/tags')) {
+                    if (path.includes('/tags/')) {
                         // https://www.pixiv.net/tags/%E5%8E%9F%E7%A5%9E/illustrations
                         // 虽然上面的 URL 里没有 type 参数，但是 pixiv 的查询参数里附带了 type='illust_and_ugoira'
                         // 下载器也照样处理一下
@@ -15527,7 +15739,7 @@ class InitSearchArtworkPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE
                 }
                 // 请求里的 s_mode 也不是 url 里的 s_mode
                 if (param === 's_mode') {
-                    if (location.pathname.startsWith('/search')) {
+                    if (path.startsWith('/search')) {
                         if (value === 'tag') {
                             this.option[param] = 's_tag';
                         }
@@ -15578,7 +15790,6 @@ class InitSearchArtworkPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE
         window.setTimeout(() => {
             this.getIdList(p);
         }, _Config__WEBPACK_IMPORTED_MODULE_20__.Config.retryTime);
-        // 限制时间大约是 3 分钟，这里为了保险起见，设置了更大的延迟时间。
     }
     tipEmptyResult = _utils_Utils__WEBPACK_IMPORTED_MODULE_14__.Utils.debounce(() => {
         _Log__WEBPACK_IMPORTED_MODULE_8__.log.error(_Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_抓取被限制时返回空结果的提示'));
@@ -17625,7 +17836,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _crawl_CrawlLatestFewWorks__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../crawl/CrawlLatestFewWorks */ "./src/ts/crawl/CrawlLatestFewWorks.ts");
 /* harmony import */ var _pageFunciton_ExportFollowingList__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../pageFunciton/ExportFollowingList */ "./src/ts/pageFunciton/ExportFollowingList.ts");
 /* harmony import */ var _pageFunciton_BatchFollowUser__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../pageFunciton/BatchFollowUser */ "./src/ts/pageFunciton/BatchFollowUser.ts");
+/* harmony import */ var _DeletedFollowingUserView__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../DeletedFollowingUserView */ "./src/ts/DeletedFollowingUserView.ts");
 // 初始化关注页面、好 P 友页面、粉丝页面
+
 
 
 
@@ -17690,6 +17903,9 @@ class InitFollowingPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE_0__
         // ).addEventListener('click', async () => {
         //   filterInactiveUsers.start()
         // })
+        _Tools__WEBPACK_IMPORTED_MODULE_6__.Tools.addBtn('crawlBtns', _Colors__WEBPACK_IMPORTED_MODULE_1__.Colors.bgGreen, '_查找已注销的用户', '', 'showDeletedFollowingUsers').addEventListener('click', async () => {
+            _DeletedFollowingUserView__WEBPACK_IMPORTED_MODULE_15__.deletedFollowingUserView.check();
+        });
     }
     getWantPage() {
         this.crawlNumber = _setting_Settings__WEBPACK_IMPORTED_MODULE_10__.settings.crawlNumber[_PageType__WEBPACK_IMPORTED_MODULE_11__.pageType.type].value;
@@ -19666,7 +19882,6 @@ class InitSearchNovelPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE_0
         window.setTimeout(() => {
             this.getIdList(p);
         }, _Config__WEBPACK_IMPORTED_MODULE_15__.Config.retryTime);
-        // 限制时间大约是 3 分钟，这里为了保险起见，设置了更大的延迟时间。
     }
     tipEmptyResult = _utils_Utils__WEBPACK_IMPORTED_MODULE_10__.Utils.debounce(() => {
         if (!_setting_Settings__WEBPACK_IMPORTED_MODULE_18__.settings.slowCrawl) {
@@ -29824,6 +30039,7 @@ It is recommended to set a number less than 256, the default value is 200.`,
     ],
     _公开: ['公开', '公開', 'Public', '公開', '공개', 'Публичный'],
     _不公开: ['不公开', '非公開', 'Private', '非公開', '비공개', 'Приватный'],
+    _非公开: ['非公开', '非公開', 'Private', '非公開', '비공개', 'Приватный'],
     _已收藏: [
         '已收藏',
         '已收藏',
@@ -30341,7 +30557,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     下载的文件保存在浏览器的下载目录里。如果你想保存到其他位置，需要修改浏览器的下载目录。
     <br><br>
-    建议您在浏览器的下载设置中关闭“下载前询问每个文件的保存位置”，否则保存每个文件时都会显示另存为对话框。
+    <strong>建议您在浏览器的下载设置中关闭“下载前询问每个文件的保存位置”，否则保存每个文件时都会显示另存为对话框。</strong>
     <br><br>
     下载器默认启用了一些增强功能，这可能会导致 Pixiv 的一些页面样式产生变化。你可以在下载器的“更多”标签页里启用或关闭这些功能。
     <br><br>
@@ -30351,7 +30567,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     下載的文件保存在瀏覽器的下載目錄裡。如果您想保存到其他位置，需要修改瀏覽器的下載目錄。
     <br><br>
-    建議您在瀏覽器的下載設置中關閉“下載前詢問每個文件的保存位置”，否則保存每個文件時都會顯示另存為對話框。
+    <strong>建議您在瀏覽器的下載設置中關閉“下載前詢問每個文件的保存位置”，否則保存每個文件時都會顯示另存為對話框。</strong>
     <br><br>
     下載器默認開啟了一些增強功能，這可能會導致 Pixiv 的一些頁面樣式產生變化。您可以在下載器的“更多”標籤頁中啟用或關閉這些功能。
     <br><br>
@@ -30361,7 +30577,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     Downloaded files are saved in the browser's download directory. If you want to save them to another location, you need to change the browser's download directory.
     <br><br>
-    It is recommended to disable "Ask where to save each file before downloading" in the browser's download settings, otherwise a save-as dialog will appear for each file.
+    <strong>It is recommended to disable "Ask where to save each file before downloading" in the browser's download settings, otherwise a save-as dialog will appear for each file.</strong>
     <br><br>
     The downloader enables some enhanced features by default, which may cause changes to the style of some Pixiv pages. You can enable or disable these features in the "More" tab of the downloader.
     <br><br>
@@ -30371,7 +30587,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     ダウンロードしたファイルはブラウザのダウンロードディレクトリに保存されます。別の場所に保存したい場合は、ブラウザのダウンロードディレクトリを変更する必要があります。
     <br><br>
-    ブラウザのダウンロード設定で「ダウンロード前に各ファイルの保存場所を確認する」をオフにすることをお勧めします。そうしないと、ファイルを保存するたびに「名前を付けて保存」ダイアログが表示されます。
+    <strong>ブラウザのダウンロード設定で「ダウンロード前に各ファイルの保存場所を確認する」をオフにすることをお勧めします。そうしないと、ファイルを保存するたびに「名前を付けて保存」ダイアログが表示されます。</strong>
     <br><br>
     ダウンローダーはデフォルトでいくつかの拡張機能を有効にしており、これによりPixivの一部のページのスタイルが変更されることがあります。これらの機能は、ダウンローダーの「その他」タブで有効または無効にできます。
     <br><br>
@@ -30381,7 +30597,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     다운로드한 파일은 브라우저의 다운로드 디렉토리에 저장됩니다. 다른 위치에 저장하려면 브라우저의 다운로드 디렉토리를 변경해야 합니다.
     <br><br>
-    브라우저의 다운로드 설정에서 "다운로드 전에 각 파일의 저장 위치를 묻기"를 비활성화하는 것이 좋습니다. 그렇지 않으면 파일을 저장할 때마다 "다른 이름으로 저장" 대화 상자가 나타납니다.
+    <strong>브라우저의 다운로드 설정에서 "다운로드 전에 각 파일의 저장 위치를 묻기"를 비활성화하는 것이 좋습니다. 그렇지 않으면 파일을 저장할 때마다 "다른 이름으로 저장" 대화 상자가 나타납니다.</strong>
     <br><br>
     다운로더는 기본적으로 몇 가지 향상된 기능을 활성화하며, 이로 인해 Pixiv의 일부 페이지 스타일이 변경될 수 있습니다. 이러한 기능은 다운로더의 "더보기" 탭에서 활성화하거나 비활성화할 수 있습니다.
     <br><br>
@@ -30391,7 +30607,7 @@ Output its age restriction only when the work is restricted, divided into: <span
     <br><br>
     Загруженные файлы сохраняются в папке загрузок браузера. Если вы хотите сохранить их в другое место, необходимо изменить папку загрузок в настройках браузера.
     <br><br>
-    Рекомендуется отключить в настройках загрузки браузера опцию "Запрашивать место сохранения каждого файла перед загрузкой", иначе при сохранении каждого файла будет отображаться диалог "Сохранить как".
+    <strong>Рекомендуется отключить в настройках загрузки браузера опцию "Запрашивать место сохранения каждого файла перед загрузкой", иначе при сохранении каждого файла будет отображаться диалог "Сохранить как".</strong>
     <br><br>
     Загрузчик по умолчанию включает некоторые расширенные функции, которые могут привести к изменению стиля некоторых страниц Pixiv. Вы можете включать или отключать эти функции на вкладке "Ещё" в загрузчике.
     <br><br>
@@ -34311,133 +34527,87 @@ To prevent duplicate filenames, it is recommended to always add {series_id}.`,
         `수상 작품을 찾을 수 없습니다. 대회가 아직 종료되지 않았기 때문일 수 있습니다.`,
         `Не найдено ни одной победившей работы, возможно, потому что конкурс ещё не завершён.`,
     ],
-    _版本更新说明18_3_0: [
-        `<strong>🚀更换了把动图转换为 WebM 的库，大幅提升转换速度</strong>
-<br>
-感谢 <a href="https://github.com/hospotho" target="_blank">hospotho</a>
-<br>
-<br>
-<strong>✨鼠标光标移动到小说缩略图上时，下载器会显示快速下载按钮，点击即可下载这个小说或系列</strong>
-<br>
-<br>
-<strong>✨支持了比赛页面</strong>
-<br>
-<br>
-<strong>✨在“我的作品”页面里，可以导出作品数据到 CSV 文件</strong>
-<br>
-<br>
-<strong>✨在保存作品的元数据时，除了之前的 TXT 格式，还可以选择保存为 JSON 格式</strong>
-<br>
-<br>
-<strong>🐞Pixiv 最近修改了搜索页面，影响了下载器的一些功能，现已修复</strong>
-<br>
-<br>
-<strong>🐞修复了一些其他 BUG</strong>`,
-        `<strong>🚀更換了將動圖轉換為 WebM 的庫，大幅提升轉換速度</strong>
-<br>
-感謝 <a href="https://github.com/hospotho" target="_blank">hospotho</a>
-<br>
-<br>
-<strong>✨滑鼠游標移到小說縮圖上時，下載器會顯示快速下載按鈕，點擊即可下載此小說或系列</strong>
-<br>
-<br>
-<strong>✨支援了比賽頁面</strong>
-<br>
-<br>
-<strong>✨在「我的作品」頁面裡，可以將作品資料匯出為 CSV 檔案</strong>
-<br>
-<br>
-<strong>✨在儲存作品元數據時，除了之前的 TXT 格式，還可以選擇儲存為 JSON 格式</strong>
-<br>
-<br>
-<strong>🐞Pixiv 最近修改了搜尋頁面，影響了下載器的一些功能，現已修復</strong>
-<br>
-<br>
-<strong>🐞修復了一些其他 BUG</strong>`,
-        `<strong>🚀Switched to a new library for converting Ugoira to WebM, significantly improving conversion speed</strong>
-<br>
-Thanks to <a href="https://github.com/hospotho" target="_blank">hospotho</a>
-<br>
-<br>
-<strong>✨When hovering the mouse cursor over a novel thumbnail, the downloader shows a quick download button; click to download the novel or series</strong>
-<br>
-<br>
-<strong>✨Added support for contest pages</strong>
-<br>
-<br>
-<strong>✨On the "My Works" page, you can now export work data to a CSV file</strong>
-<br>
-<br>
-<strong>✨When saving work metadata, in addition to the previous TXT format, you can now choose to save in JSON format</strong>
-<br>
-<br>
-<strong>🐞Pixiv recently changed the search page, which affected some downloader features; this has now been fixed</strong>
-<br>
-<br>
-<strong>🐞Fixed some other bugs</strong>`,
-        `<strong>🚀Ugoira を WebM に変換するライブラリを変更し、変換速度を大幅に向上</strong>
-<br>
-<a href="https://github.com/hospotho" target="_blank">hospotho</a> に感謝
-<br>
-<br>
-<strong>✨小説のサムネイルにマウスカーソルを合わせると、ダウンロードツールがクイックダウンロードボタンを表示し、クリックでその小説またはシリーズをダウンロード可能</strong>
-<br>
-<br>
-<strong>✨コンテストページに対応しました</strong>
-<br>
-<br>
-<strong>✨「私の作品」ページで、作品データを CSV ファイルにエクスポート可能</strong>
-<br>
-<br>
-<strong>✨作品のメタデータを保存する際、従来の TXT 形式に加えて JSON 形式も選択可能</strong>
-<br>
-<br>
-<strong>🐞Pixiv が最近検索ページを変更したためダウンロードツールの一部の機能に影響が出ていましたが、修正済み</strong>
-<br>
-<br>
-<strong>🐞その他のいくつかのバグを修正</strong>`,
-        `<strong>🚀Ugoira를 WebM으로 변환하는 라이브러리를 변경하여 변환 속도를 대폭 향상</strong>
-<br>
-<a href="https://github.com/hospotho" target="_blank">hospotho</a>에게 감사
-<br>
-<br>
-<strong>✨소설 썸네일 위에 마우스 커서를 올리면 다운로더가 빠른 다운로드 버튼을 표시하며, 클릭하면 해당 소설 또는 시리즈를 다운로드할 수 있습니다</strong>
-<br>
-<br>
-<strong>✨콘테스트 페이지 지원 추가</strong>
-<br>
-<br>
-<strong>✨"내 작품" 페이지에서 작품 데이터를 CSV 파일로 내보내기 가능</strong>
-<br>
-<br>
-<strong>✨작품 메타데이터 저장 시 기존 TXT 형식 외에 JSON 형식도 선택 가능</strong>
-<br>
-<br>
-<strong>🐞Pixiv가 최근 검색 페이지를 변경하여 다운로더의 일부 기능에 영향을 주었으나 이제 수정 완료</strong>
-<br>
-<br>
-<strong>🐞기타 여러 버그 수정</strong>`,
-        `<strong>🚀Заменили библиотеку для конвертации Ugoira в WebM, значительно увеличив скорость конвертации</strong>
-<br>
-Спасибо <a href="https://github.com/hospotho" target="_blank">hospotho</a>
-<br>
-<br>
-<strong>✨При наведении курсора мыши на миниатюру романа загрузчик показывает кнопку быстрой загрузки; клик — и роман или серия скачивается</strong>
-<br>
-<br>
-<strong>✨Добавлена поддержка страниц конкурсов</strong>
-<br>
-<br>
-<strong>✨На странице «Мои работы» теперь можно экспортировать данные работ в CSV-файл</strong>
-<br>
-<br>
-<strong>✨При сохранении метаданных работы, помимо прежнего TXT-формата, теперь можно выбрать сохранение в формате JSON</strong>
-<br>
-<br>
-<strong>🐞Pixiv недавно изменил страницу поиска, что повлияло на некоторые функции загрузчика; теперь исправлено</strong>
-<br>
-<br>
-<strong>🐞Исправлены некоторые другие баги</strong>`,
+    _提示有些用户可能已经注销: [
+        `有些用户可能已经注销，所以实际上的用户数量会少一些。`,
+        `有些用戶可能已經註銷，所以實際上的用戶數量會少一些。`,
+        `Some users may have already deactivated their accounts, so the actual number of users will be slightly lower.`,
+        `一部のユーザーが退会している可能性があるため、実際のユーザー数は少し少なくなります。`,
+        `일부 사용자가 이미 탈퇴했을 수 있으므로 실제 사용자 수는 조금 더 적을 수 있습니다.`,
+        `Некоторые пользователи могли уже деактивировать аккаунты, поэтому фактическое количество пользователей будет немного меньше.`,
+    ],
+    _查找已注销的用户: [
+        `查找已注销的用户`,
+        `查找已註銷的用戶`,
+        `Find deactivated users`,
+        `退会済みユーザーを検索`,
+        `탈퇴한 사용자 찾기`,
+        `Поиск деактивированных/удалённых пользователей`,
+    ],
+    _检查是否有已注销的用户的说明: [
+        `该功能会检查你的关注列表，找出现在比之前少了哪些用户，然后检查他们是否注销了账号。<br>
+    Pixiv 不会显示被注销的用户，所以此功能依赖于下载器自己保存的历史关注数据（该数据保存在本地）。<br>
+    该数据最早会从该功能推出时（2026 年 3 月）开始保存；如果你在此日期之后才安装了下载器，那么下载器开始工作之后才会保存此数据。<br>
+    下载器只能检查到在此之后注销的用户。`,
+        `該功能會檢查你的關注列表，找出現在比之前少了哪些用戶，然後檢查他們是否註銷了帳號。<br>
+    Pixiv 不會顯示被註銷的用戶，所以此功能依賴於下載器自己保存的歷史關注資料（該資料保存在本地）。<br>
+    該資料最早會從該功能推出時（2026 年 3 月）開始保存；如果你在此日期之後才安裝了下載器，那麼下載器開始工作之後才會保存此資料。<br>
+    下載器只能檢查到在此之後註銷的用戶。`,
+        `This feature checks your following list to identify which users are now missing compared to before, and then checks if they have deactivated their accounts.<br>
+    Pixiv does not display deactivated users, so this feature relies on the historical following data saved locally by the downloader itself.<br>
+    This data starts being saved from when the feature was released (March 2026) at the earliest; if you installed the downloader after this date, the data will only start being saved after the downloader begins working.<br>
+    The downloader can only detect users who deactivated after this point.`,
+        `この機能はあなたのフォロー一覧をチェックし、現在前回よりも減ったユーザーを特定した後、それらのユーザーがアカウントを退会したかどうかを確認します。<br>
+    Pixiv は退会したユーザーを表示しないため、この機能はダウンロードツール自身がローカルに保存している履歴フォローデータに依存します。<br>
+    このデータは最も早くてもこの機能がリリースされた時点（2026年3月）から保存が開始されます。この日付以降にダウンロードツールをインストールした場合、ダウンロードツールが動作を開始した時点からデータの保存が始まります。<br>
+    ダウンロードツールはこの日付以降に退会したユーザーのみ検出可能です。`,
+        `이 기능은 팔로잉 목록을 확인하여 이전보다 줄어든 사용자를 찾아내고, 해당 사용자가 계정을 탈퇴했는지 확인합니다.<br>
+    Pixiv는 탈퇴한 사용자를 표시하지 않으므로 이 기능은 다운로더가 자체적으로 로컬에 저장한 과거 팔로잉 데이터에 의존합니다.<br>
+    이 데이터는 가장 빠른 경우 해당 기능 출시 시점(2026년 3월)부터 저장되기 시작하며, 이 날짜 이후에 다운로더를 설치했다면 다운로더가 작동을 시작한 이후부터 데이터가 저장됩니다.<br>
+    다운로더는 이 시점 이후에 탈퇴한 사용자만 확인할 수 있습니다.`,
+        `Эта функция проверяет ваш список подписок, определяет, какие пользователи теперь отсутствуют по сравнению с предыдущим состоянием, а затем проверяет, деактивировали ли они аккаунт.<br>
+    Pixiv не показывает деактивированных пользователей, поэтому функция полагается на историю подписок, сохранённую локально самим загрузчиком.<br>
+    Эти данные начинают сохраняться не раньше даты выпуска функции (март 2026 года); если вы установили загрузчик позже этой даты, то данные начнут сохраняться только после того, как загрузчик начал работу.<br>
+    Загрузчик может обнаружить только тех пользователей, которые деактивировали аккаунт после этой даты.`,
+    ],
+    _检查用户x是否已注销: [
+        `检查用户 {} 是否已注销`,
+        `檢查用戶 {} 是否已註銷`,
+        `Check if user {} has deactivated`,
+        `ユーザー {} が退会済みか確認`,
+        `사용자 {} 가 탈퇴했는지 확인`,
+        `Проверить, деактивирован ли пользователь {}`,
+    ],
+    _该用户已注销: [
+        `该用户已注销`,
+        `該用戶已註銷`,
+        `This user has deactivated`,
+        `このユーザーは退会済みです`,
+        `이 사용자는 탈퇴했습니다`,
+        `Этот пользователь деактивирован`,
+    ],
+    _该用户未注销: [
+        `该用户未注销`,
+        `該用戶未註銷`,
+        `This user has not deactivated`,
+        `このユーザーは退会していません`,
+        `이 사용자는 탈퇴하지 않았습니다`,
+        `Этот пользователь не деактивирован`,
+    ],
+    _已注销用户数量: [
+        `已注销用户数量`,
+        `已註銷用戶數量`,
+        `Number of deactivated users`,
+        `退会済みユーザーの数`,
+        `탈퇴한 사용자 수`,
+        `Количество деактивированных пользователей`,
+    ],
+    _没有找到已注销的用户: [
+        `没有找到已注销的用户`,
+        `沒有找到已註銷的用戶`,
+        `No deactivated users found`,
+        `退会済みユーザーは見つかりませんでした`,
+        `탈퇴한 사용자를 찾을 수 없습니다`,
+        `Не найдено удалённых/деактивированных пользователей`,
     ],
 };
 
@@ -36523,10 +36693,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _setting_Settings__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../setting/Settings */ "./src/ts/setting/Settings.ts");
 /* harmony import */ var _PageType__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../PageType */ "./src/ts/PageType.ts");
-/* harmony import */ var _store_Store__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../store/Store */ "./src/ts/store/Store.ts");
-/* harmony import */ var _Language__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../Language */ "./src/ts/Language.ts");
-/* harmony import */ var _Log__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../Log */ "./src/ts/Log.ts");
-/* harmony import */ var _EVT__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../EVT */ "./src/ts/EVT.ts");
+/* harmony import */ var _Language__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../Language */ "./src/ts/Language.ts");
+/* harmony import */ var _Log__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../Log */ "./src/ts/Log.ts");
+/* harmony import */ var _EVT__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../EVT */ "./src/ts/EVT.ts");
+/* harmony import */ var _FollowingList__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../FollowingList */ "./src/ts/FollowingList.ts");
+/* harmony import */ var _Toast__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../Toast */ "./src/ts/Toast.ts");
+
 
 
 
@@ -36536,34 +36708,41 @@ __webpack_require__.r(__webpack_exports__);
 // 在搜索页面里移除已关注用户的作品
 class RemoveWorksOfFollowedUsersOnSearchPage {
     constructor() {
-        // 初始化时，页面上的作品元素尚未生成，所以不必使用 findAllWorks 方法
-        // this.findAllWorks()
-        this.createObserver(document.body);
         this.bindEvents();
+        this.createObserver(document.body);
     }
     bindEvents() {
-        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_5__.EVT.list.settingChange, (ev) => {
+        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_4__.EVT.list.settingChange, (ev) => {
             const data = ev.detail.data;
             if (data.name === 'removeWorksOfFollowedUsersOnSearchPage' &&
                 data.value) {
-                this.findAllWorks();
+                // 查找当前页面上的作品
+                this.findWorks(document.body);
             }
         });
-        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_5__.EVT.list.followingUsersChange, () => {
-            this.findAllWorks();
+        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_4__.EVT.list.followingUsersChange, () => {
+            this.findWorks(document.body);
         });
-        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_5__.EVT.list.pageSwitch, () => {
-            this.showTip = false;
+        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_4__.EVT.list.pageSwitch, () => {
+            this.showTip = true;
+            // 在来回切换页面时（例如之前进入了第 2 页，之后又从其他页面回到第 2 页），有时候 pixiv 的代码会报错：
+            // Cannot remove a child from a different parent，并导致下载器没能成功移除该页面上应该移除的作品元素
+            // 等待一段时间之后再重试，就可以正常移除元素了
+            window.setTimeout(() => {
+                this.findWorks(document.body);
+            }, 1000);
         });
     }
-    showTip = false;
-    // 在每个页面上只显示一次提示
+    showTip = true;
+    // 在每个页面上只显示一次提示，切换页面后可以再次显示
     showTipOnce() {
-        if (this.showTip) {
+        if (!this.showTip) {
             return;
         }
-        this.showTip = true;
-        _Log__WEBPACK_IMPORTED_MODULE_4__.log.warning(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_在搜索页面里移除已关注用户的作品'));
+        this.showTip = false;
+        const tip = _Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_在搜索页面里移除已关注用户的作品');
+        _Log__WEBPACK_IMPORTED_MODULE_3__.log.warning(tip);
+        _Toast__WEBPACK_IMPORTED_MODULE_6__.toast.warning(tip);
     }
     get enable() {
         return (_setting_Settings__WEBPACK_IMPORTED_MODULE_0__.settings.removeWorksOfFollowedUsersOnSearchPage &&
@@ -36575,54 +36754,51 @@ class RemoveWorksOfFollowedUsersOnSearchPage {
     // 例如在搜索页面里，一个作品元素分为 3 个部分：1. 缩略图 2. 标题 3. 作者（用户名）
     // ArtworkThumbnail 获取的元素只是缩略图，不是完整的作品元素，所以不能用它来移除作品元素。而且缩略图里面有时可能没有用户信息，无法判断用户是否已关注。
     check(el) {
-        if (!this.enable) {
-            return;
-        }
         const userLink = el.querySelector('a[href*=users]');
         if (!userLink) {
             return;
         }
         // https://www.pixiv.net/users/9212166
         const userID = userLink.href.match(/\d+/);
-        if (userID && _store_Store__WEBPACK_IMPORTED_MODULE_2__.store.followingUserIDList.includes(userID[0])) {
+        if (userID && _FollowingList__WEBPACK_IMPORTED_MODULE_5__.followingList.following.includes(userID[0])) {
             el.remove();
+            // console.log('remove', el)
             this.showTipOnce();
         }
     }
-    // 搜索页面里的插画作品选择器
-    worksSelector = 'section ul li';
-    /**检查当前页面上的作品元素 */
-    findAllWorks() {
-        if (!this.enable) {
+    findWorks(el) {
+        if (!this.enable ||
+            el.nodeType !== 1 ||
+            (el.nodeName !== 'BODY' && el.nodeName !== 'DIV' && el.nodeName !== 'LI')) {
             return;
         }
-        const allLI = document.body.querySelectorAll(this.worksSelector);
-        for (const LI of allLI) {
-            this.check(LI);
+        // 新版搜索页面里的插画作品选择器
+        let works = el.querySelectorAll('div.col-span-2');
+        if (works.length === 0) {
+            // 新版搜索页面里的插画作品选择器
+            works = el.querySelectorAll('div[width="184"]');
+        }
+        if (works.length === 0) {
+            // 旧版搜索页面里的插画作品选择器
+            works = el.querySelectorAll('section ul li');
+        }
+        // 如果这些选择器都无效，需要考虑元素本身就是作品元素的情况，所以它没有符合要求的子元素
+        if (works.length === 0) {
+            // console.log(el)
+            return this.check(el);
+        }
+        for (const el of works) {
+            this.check(el);
         }
     }
     /**使用监视器，检查未来添加的作品元素 */
     createObserver(target) {
         const observer = new MutationObserver((records) => {
-            if (!this.enable) {
-                return;
-            }
             for (const record of records) {
                 if (record.addedNodes.length > 0) {
                     // 遍历被添加的元素，检查其中的作品元素
                     for (const newEl of record.addedNodes) {
-                        if (newEl.nodeType !== 1) {
-                            continue;
-                        }
-                        if (newEl.nodeName === 'LI') {
-                            this.check(newEl);
-                        }
-                        else {
-                            const allLI = newEl.querySelectorAll('li');
-                            for (const LI of allLI) {
-                                this.check(LI);
-                            }
-                        }
+                        this.findWorks(newEl);
                     }
                 }
             }
@@ -42001,8 +42177,6 @@ class Store {
     result = []; // 储存抓取结果
     artworkIDList = []; // 储存抓取到的图片作品的 id 列表，用来避免重复添加
     novelIDList = []; // 储存抓取到的小说作品的 id 列表，用来避免重复添加
-    /**当前登录用户的关注用户列表 */
-    followingUserIDList = [];
     /**记录从每个作品里下载多少个文件 */
     downloadCount = {};
     // 恢复未完成的下载之后，生成 downloadCount 数据
@@ -59762,7 +59936,7 @@ class Utils {
     }
     // 判断当前页面是否属于 pixiv.net
     static isPixiv() {
-        return window.location.host.endsWith('.pixiv.net');
+        return location.host.endsWith('.pixiv.net');
     }
     /** 从 url 中获取指定的查询字段的值 */
     // 注意：返回值经过 encodeURIComponent 编码！

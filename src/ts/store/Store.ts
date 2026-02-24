@@ -27,9 +27,6 @@ class Store {
   private artworkIDList: number[] = [] // 储存抓取到的图片作品的 id 列表，用来避免重复添加
   private novelIDList: number[] = [] // 储存抓取到的小说作品的 id 列表，用来避免重复添加
 
-  /**当前登录用户的关注用户列表 */
-  public followingUserIDList: string[] = []
-
   /**记录从每个作品里下载多少个文件 */
   public downloadCount: {
     [workID: string]: number

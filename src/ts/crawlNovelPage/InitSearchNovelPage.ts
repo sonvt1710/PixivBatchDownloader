@@ -299,7 +299,6 @@ class InitSearchNovelPage extends InitPageBase {
     window.setTimeout(() => {
       this.getIdList(p)
     }, Config.retryTime)
-    // 限制时间大约是 3 分钟，这里为了保险起见，设置了更大的延迟时间。
   }
 
   private tipEmptyResult = Utils.debounce(() => {

@@ -229,10 +229,13 @@ class API {
   }
 
   // 获取用户信息
-  static getUserProfile(id: string): Promise<UserProfile> {
+  static getUserProfile(
+    id: string,
+    full: '0' | '1' = '1'
+  ): Promise<UserProfile> {
     // full=1 在画师的作品列表页使用，获取详细信息
     // full=0 在作品页内使用，只获取少量信息
-    const url = `https://www.pixiv.net/ajax/user/${id}?full=1`
+    const url = `https://www.pixiv.net/ajax/user/${id}?full=${full}`
     return this.fetch(url)
   }
 

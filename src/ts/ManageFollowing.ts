@@ -1,19 +1,10 @@
 import browser from 'webextension-polyfill'
-
-export interface FollowingData {
-  /** 指示这个对象属于哪个用户 id **/
-  user: string
-  /** 用户的关注用户的 id 列表 **/
-  following: string[]
-  /** 此用户的关注用户总数。这是公开和非公开关注的数量之和。因为本程序不区分一个关注是公开的还是非公开的
-   *  注意这可能与 following 的 length 不同，因为这是按照 API 返回的 total 计算的，但是 API 返回的实际用户数量可能比 total 少
-   */
-  total: number
-  /** 最后一次更新本地数据的时间戳 **/
-  time: number
-}
-
-export type List = FollowingData[]
+import {
+  DeletedUser,
+  FollowingData,
+  AllUserFollowingData,
+} from './FollowingData'
+import { deletedFollowingUsers } from './DeletedFollowingUsers'
 
 interface SetData {
   /**数据属于哪个用户 */
@@ -39,6 +30,15 @@ interface UserOperate {
 class ManageFollowing {
   constructor() {
     this.restore()
+
+    // 定时检查 deletedUsers 是否有更新，如果有更新则重新 dispatch 数据并储存数据
+    setInterval(() => {
+      if (deletedFollowingUsers.changed) {
+        this.dispatchFollowingList()
+        this.storage()
+        deletedFollowingUsers.changed = false
+      }
+    }, 1000)
 
     browser.runtime.onInstalled.addListener(async () => {
       // 每次更新或刷新扩展时尝试读取数据，如果数据不存在则设置数据
@@ -89,23 +89,22 @@ class ManageFollowing {
           // 当前台获取新的关注列表完成之后，会发送此消息。
           // 如果发送消息的页面和发起请求的页面是同一个，则解除锁定状态
           if (sender!.tab!.id === this.updateTaskTabID) {
-            // set 操作不会被放入等待队列中，而且总是会被立即执行
-            // 这是因为在请求数据的过程中可能产生了其他操作，set 操作的数据可能已经是旧的了
-            // 所以需要先应用 set 里的数据，然后再执行其他操作，在旧数据的基础上进行修改
-            this.setData(data)
-
-            // 如果队列中没有等待的操作，则立即派发数据并储存数据
-            // 如果有等待的操作，则不派发和储存数据，因为稍后队列执行完毕后也会派发和储存数据
-            // 这是为了避免重复派发和储存数据，避免影响性能
-            if (this.queue.length === 0) {
-              this.dispatchFollowingList()
-              this.storage()
-            }
-
             this.status = 'idle'
-            return
           }
-          // 如果不是同一个页面，这个 set 操作会被丢弃
+          // 不管数据是否来自于发起请求的页面都更新数据。因为有些操作可能会直接更新数据，没有事先请求批准的环节
+
+          // set 操作不会被放入等待队列中，而且总是会被立即执行
+          // 这是因为在请求数据的过程中可能产生了其他操作，set 操作的数据可能已经是旧的了
+          // 所以需要先应用 set 里的数据，然后再执行其他操作，在旧数据的基础上进行修改
+          this.setData(data)
+
+          // 如果队列中没有等待的操作，则立即派发数据并储存数据
+          // 如果有等待的操作，则不派发和储存数据，因为稍后队列执行完毕后也会派发和储存数据
+          // 这是为了避免重复派发和储存数据，避免影响性能
+          if (this.queue.length === 0) {
+            this.dispatchFollowingList()
+            this.storage()
+          }
         }
       }
     )
@@ -195,7 +194,7 @@ class ManageFollowing {
 
   private readonly store = 'following'
 
-  private data: List = []
+  private data: AllUserFollowingData = []
 
   /**当状态为 locked 时，如果需要增加或删除某个关注的用户，则将其放入等待队列 */
   private queue: UserOperate[] = []
@@ -212,7 +211,7 @@ class ManageFollowing {
     this.status = 'loading'
     const data = await browser.storage.local.get(this.store)
     if (data[this.store] && Array.isArray(data[this.store])) {
-      this.data = data[this.store] as List
+      this.data = data[this.store] as AllUserFollowingData
       this.status = 'idle'
     } else {
       return setTimeout(() => {
@@ -226,6 +225,12 @@ class ManageFollowing {
    * 如果未指定 tab，则向所有的 pixiv 标签页派发
    */
   private async dispatchFollowingList(tab?: browser.Tabs.Tab) {
+    // 调试用：重置 deletedUsers 数据
+    // this.data.forEach(item => {
+    //   item.deletedUsers = []
+    // })
+    // this.storage()
+
     if (tab?.id) {
       browser.tabs.sendMessage(tab.id, {
         msg: 'dispathFollowingData',
@@ -272,7 +277,6 @@ class ManageFollowing {
 
     // 队列中的所有操作完成后，派发和储存数据
     this.dispatchFollowingList()
-
     this.storage()
   }
 
@@ -281,14 +285,21 @@ class ManageFollowing {
       (following) => following.user === data.user
     )
     if (index > -1) {
+      // 对比新旧数据，找出被删除的用户 ID，并将其添加到 deletedUsers 列表中
+      const oldFollowing = this.data[index]
+      deletedFollowingUsers.whenSetFollowingList(oldFollowing, data.following)
+
+      // 更新当前登录的用户的关注数据
       this.data[index].following = data.following
       this.data[index].total = data.total
       this.data[index].time = new Date().getTime()
     } else {
+      // 之前没有保存过当前登录的用户的关注数据，新增一份数据
       this.data.push({
         user: data.user,
         following: data.following,
         total: data.total,
+        deletedUsers: [],
         time: new Date().getTime(),
       })
     }
@@ -303,9 +314,14 @@ class ManageFollowing {
     }
 
     if (operate.action === 'add') {
+      deletedFollowingUsers.whenAddFollowing(this.data[i], operate.userID)
+
       this.data[i].following.push(operate.userID)
       this.data[i].total = this.data[i].total + 1
     } else if (operate.action === 'remove') {
+      deletedFollowingUsers.whenDeleteFollowing(this.data[i], operate.userID)
+
+      // 更新关注列表和总数
       const index = this.data[i].following.findIndex(
         (id) => id === operate.userID
       )
