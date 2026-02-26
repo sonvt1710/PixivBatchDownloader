@@ -1,6 +1,4 @@
-import browser from 'webextension-polyfill'
-import { DeletedUser, FollowingData, DispatchMsg } from './FollowingData'
-import { store } from './store/Store'
+import { UserInfo } from './FollowingData'
 import { msgBox } from './MsgBox'
 import { lang } from './Language'
 import { followingList } from './FollowingList'
@@ -12,30 +10,23 @@ import { EVT } from './EVT'
 import { settings } from './setting/Settings'
 import { Tools } from './Tools'
 
-class DeletedFollowingUserView {
+class FindDeactivatedUsers {
   constructor() {
-    // ManageFollowing 派发关注数据时，保存 deletedUsers 到这个类的副本里备用
-    browser.runtime.onMessage.addListener(
-      (
-        msg: any,
-        sender: browser.Runtime.MessageSender,
-        sendResponse: Function
-      ): any => {
-        const m = msg as DispatchMsg
-        if (m.msg === 'dispathFollowingData') {
-          const deletedUsers = m.data?.find(
-            (data) => data.user === store.loggedUserID
-          )?.deletedUsers
-          if (deletedUsers) {
-            this.deletedUsers = deletedUsers
-          }
-        }
-      }
-    )
+    window.addEventListener(EVT.list.followingUsersChange, () => {
+      this.dataChange = true
+    })
   }
 
-  // 从 FollowingData 里保存 deletedUsers 的副本便于使用
-  private deletedUsers: DeletedUser[] = []
+  private dataChange = false
+
+  private async waitChange(): Promise<void> {
+    if (this.dataChange) {
+      return
+    } else {
+      await Utils.sleep(100)
+      return this.waitChange()
+    }
+  }
 
   public async check() {
     const tip = lang.transl('_查找已注销的用户')
@@ -45,21 +36,28 @@ class DeletedFollowingUserView {
     log.log(lang.transl('_检查是否有已注销的用户的说明'))
 
     // 等待数据更新和派发完成
+    this.dataChange = false
     await followingList.getList()
-    await Utils.sleep(1000)
+    await this.waitChange()
 
     // 检查已经不存在于关注列表里，并且不是用户手动取消关注的用户
-    const needCheck = this.deletedUsers.filter(
-      (user) => user.deleteByUser === false
-    )
-    if (this.deletedUsers.length === 0 || needCheck.length === 0) {
+    const deletedUsers: UserInfo[] = []
+    followingList.followedUsersInfo.forEach((user) => {
+      if (
+        followingList.following.includes(user.id) === false &&
+        user.deleteByUser === false
+      ) {
+        deletedUsers.push(user)
+      }
+    })
+    if (deletedUsers.length === 0) {
       this.tipNoResult()
       this.tipComplete()
       return
     }
 
-    const deactivatedUsers: DeletedUser[] = []
-    for (const user of needCheck) {
+    const deactivatedUsers: UserInfo[] = []
+    for (const user of deletedUsers) {
       // 之前已经确定注销了的用户
       if (!user.exist) {
         deactivatedUsers.push(user)
@@ -105,7 +103,7 @@ class DeletedFollowingUserView {
     this.tipComplete()
   }
 
-  private output(users: DeletedUser[]) {
+  private output(users: UserInfo[]) {
     log.log(lang.transl('_已注销用户数量') + `: ${users.length}`)
     for (const user of users) {
       let img = ''
@@ -135,5 +133,5 @@ class DeletedFollowingUserView {
   }
 }
 
-const deletedFollowingUserView = new DeletedFollowingUserView()
-export { deletedFollowingUserView }
+const findDeactivatedUsers = new FindDeactivatedUsers()
+export { findDeactivatedUsers }

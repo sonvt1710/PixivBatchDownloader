@@ -6,12 +6,7 @@ import { settings } from './setting/Settings'
 import { store } from './store/Store'
 import { toast } from './Toast'
 import { Utils } from './utils/Utils'
-import {
-  DispatchMsg,
-  UserInfo,
-  AllUserFollowingData,
-  DeletedUser,
-} from './FollowingData'
+import { DispatchMsg, UserInfo, AllUserFollowingData } from './FollowingData'
 import { log } from './Log'
 
 // 更新关注列表
@@ -159,6 +154,8 @@ class FollowingList {
           id: users.userId,
           name: users.userName,
           avatar: users.profileImageUrl,
+          deleteByUser: false,
+          exist: true,
         })
       }
       const type =

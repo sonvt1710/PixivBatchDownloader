@@ -16,7 +16,7 @@ import { exportFollowingList } from '../pageFunciton/ExportFollowingList'
 import { batchFollowUser } from '../pageFunciton/BatchFollowUser'
 import { filterInactiveUsers } from '../pageFunciton/FilterInactiveUsers'
 import { IDData } from '../store/StoreType'
-import { deletedFollowingUserView } from '../DeletedFollowingUserView'
+import { findDeactivatedUsers } from '../FindDeactivatedUsers'
 
 // 页面子类型：我的关注 | 我的好 P 友 | 我的粉丝
 type PageType = 'following' | 'mypixiv' | 'followers'
@@ -112,7 +112,7 @@ class InitFollowingPage extends InitPageBase {
       '',
       'findDeactivatedUsers'
     ).addEventListener('click', async () => {
-      deletedFollowingUserView.check()
+      findDeactivatedUsers.check()
     })
   }
 

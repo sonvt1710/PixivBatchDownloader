@@ -3420,151 +3420,6 @@ const copyWorkInfo = new CopyWorkInfo();
 
 /***/ }),
 
-/***/ "./src/ts/DeletedFollowingUserView.ts":
-/*!********************************************!*\
-  !*** ./src/ts/DeletedFollowingUserView.ts ***!
-  \********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   deletedFollowingUserView: () => (/* binding */ deletedFollowingUserView)
-/* harmony export */ });
-/* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! webextension-polyfill */ "./node_modules/webextension-polyfill/dist/browser-polyfill.js");
-/* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _store_Store__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./store/Store */ "./src/ts/store/Store.ts");
-/* harmony import */ var _MsgBox__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./MsgBox */ "./src/ts/MsgBox.ts");
-/* harmony import */ var _Language__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Language */ "./src/ts/Language.ts");
-/* harmony import */ var _FollowingList__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./FollowingList */ "./src/ts/FollowingList.ts");
-/* harmony import */ var _Log__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./Log */ "./src/ts/Log.ts");
-/* harmony import */ var _utils_Utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./utils/Utils */ "./src/ts/utils/Utils.ts");
-/* harmony import */ var _API__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./API */ "./src/ts/API.ts");
-/* harmony import */ var _Toast__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./Toast */ "./src/ts/Toast.ts");
-/* harmony import */ var _EVT__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./EVT */ "./src/ts/EVT.ts");
-/* harmony import */ var _setting_Settings__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./setting/Settings */ "./src/ts/setting/Settings.ts");
-/* harmony import */ var _Tools__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./Tools */ "./src/ts/Tools.ts");
-
-
-
-
-
-
-
-
-
-
-
-
-class DeletedFollowingUserView {
-    constructor() {
-        // ManageFollowing 派发关注数据时，保存 deletedUsers 到这个类的副本里备用
-        webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().runtime.onMessage.addListener((msg, sender, sendResponse) => {
-            const m = msg;
-            if (m.msg === 'dispathFollowingData') {
-                const deletedUsers = m.data?.find((data) => data.user === _store_Store__WEBPACK_IMPORTED_MODULE_1__.store.loggedUserID)?.deletedUsers;
-                if (deletedUsers) {
-                    this.deletedUsers = deletedUsers;
-                    console.log('deletedUsers：', this.deletedUsers);
-                }
-            }
-        });
-    }
-    // 从 FollowingData 里保存 deletedUsers 的副本便于使用
-    deletedUsers = [];
-    async check() {
-        const tip = _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_查找已注销的用户');
-        _EVT__WEBPACK_IMPORTED_MODULE_9__.EVT.fire('closeCenterPanel');
-        _Toast__WEBPACK_IMPORTED_MODULE_8__.toast.show(tip);
-        _Log__WEBPACK_IMPORTED_MODULE_5__.log.warning('🚀' + tip);
-        _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_检查是否有已注销的用户的说明'));
-        // 等待数据更新和派发完成
-        await _FollowingList__WEBPACK_IMPORTED_MODULE_4__.followingList.getList();
-        await _utils_Utils__WEBPACK_IMPORTED_MODULE_6__.Utils.sleep(1000);
-        // 检查已经不存在于关注列表里，并且不是用户手动取消关注的用户
-        const needCheck = this.deletedUsers.filter((user) => user.deleteByUser === false);
-        if (this.deletedUsers.length === 0 || needCheck.length === 0) {
-            this.tipNoResult();
-            this.tipComplete();
-            return;
-        }
-        const deactivatedUsers = [];
-        for (const user of needCheck) {
-            // 之前已经确定注销了的用户
-            if (!user.exist) {
-                deactivatedUsers.push(user);
-            }
-            else {
-                // 检查用户是否已注销
-                const link = _Tools__WEBPACK_IMPORTED_MODULE_11__.Tools.createUserLink(user.id, user.name);
-                _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_检查用户x是否已注销', link));
-                let flag = false;
-                try {
-                    // 调试用：获取一个不存在的用户的信息
-                    // const json = await API.getUserProfile('16689973', '0')
-                    const json = await _API__WEBPACK_IMPORTED_MODULE_7__.API.getUserProfile(user.id, '0');
-                    if (json.error) {
-                        flag = true;
-                    }
-                    else {
-                        _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_该用户未注销'));
-                    }
-                }
-                catch (error) {
-                    if (error?.status === 403) {
-                        flag = true;
-                    }
-                }
-                if (flag) {
-                    user.exist = false;
-                    deactivatedUsers.push(user);
-                    _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_该用户已注销'));
-                }
-                await _utils_Utils__WEBPACK_IMPORTED_MODULE_6__.Utils.sleep(_setting_Settings__WEBPACK_IMPORTED_MODULE_10__.settings.slowCrawlDealy);
-            }
-        }
-        // 调试用：输出未注销的用户，这是为了在没有已注销用户时也能输出结果，以便检查样式
-        // this.output(needCheck.filter(user => user.exist))
-        if (deactivatedUsers.length === 0) {
-            this.tipNoResult();
-        }
-        else {
-            this.output(deactivatedUsers);
-        }
-        this.tipComplete();
-    }
-    output(users) {
-        _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_已注销用户数量') + `: ${users.length}`);
-        for (const user of users) {
-            let img = '';
-            // 输出头像、id、名字
-            if (user.avatar) {
-                img = `<img src="${user.avatar}" width="50" height="50" style="vertical-align: middle; border-radius: 50%; margin-right: 10px;">`;
-            }
-            const html = `<a href="https://www.pixiv.net/users/${user.id}" target="_blank">
-        ${img}
-        <span style="margin-right: 10px;">${user.id}</span>
-        <span style="margin-right: 10px;">${user.name}</span>
-        </a>`;
-            _Log__WEBPACK_IMPORTED_MODULE_5__.log.log(html, 2);
-        }
-    }
-    tipNoResult() {
-        const msg = _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_没有找到已注销的用户');
-        _MsgBox__WEBPACK_IMPORTED_MODULE_2__.msgBox.warning(msg);
-        _Log__WEBPACK_IMPORTED_MODULE_5__.log.warning(msg);
-    }
-    tipComplete() {
-        const msg = '✅' + _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_查找已注销的用户');
-        _Log__WEBPACK_IMPORTED_MODULE_5__.log.success(msg);
-    }
-}
-const deletedFollowingUserView = new DeletedFollowingUserView();
-
-
-
-/***/ }),
-
 /***/ "./src/ts/EVT.ts":
 /*!***********************!*\
   !*** ./src/ts/EVT.ts ***!
@@ -4279,6 +4134,153 @@ const fileName = new FileName();
 
 /***/ }),
 
+/***/ "./src/ts/FindDeactivatedUsers.ts":
+/*!****************************************!*\
+  !*** ./src/ts/FindDeactivatedUsers.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   findDeactivatedUsers: () => (/* binding */ findDeactivatedUsers)
+/* harmony export */ });
+/* harmony import */ var _MsgBox__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./MsgBox */ "./src/ts/MsgBox.ts");
+/* harmony import */ var _Language__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Language */ "./src/ts/Language.ts");
+/* harmony import */ var _FollowingList__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./FollowingList */ "./src/ts/FollowingList.ts");
+/* harmony import */ var _Log__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Log */ "./src/ts/Log.ts");
+/* harmony import */ var _utils_Utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./utils/Utils */ "./src/ts/utils/Utils.ts");
+/* harmony import */ var _API__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./API */ "./src/ts/API.ts");
+/* harmony import */ var _Toast__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./Toast */ "./src/ts/Toast.ts");
+/* harmony import */ var _EVT__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./EVT */ "./src/ts/EVT.ts");
+/* harmony import */ var _setting_Settings__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./setting/Settings */ "./src/ts/setting/Settings.ts");
+/* harmony import */ var _Tools__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./Tools */ "./src/ts/Tools.ts");
+
+
+
+
+
+
+
+
+
+
+class FindDeactivatedUsers {
+    constructor() {
+        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_7__.EVT.list.followingUsersChange, () => {
+            this.dataChange = true;
+        });
+    }
+    dataChange = false;
+    async waitChange() {
+        if (this.dataChange) {
+            return;
+        }
+        else {
+            await _utils_Utils__WEBPACK_IMPORTED_MODULE_4__.Utils.sleep(100);
+            return this.waitChange();
+        }
+    }
+    async check() {
+        const tip = _Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_查找已注销的用户');
+        _EVT__WEBPACK_IMPORTED_MODULE_7__.EVT.fire('closeCenterPanel');
+        _Toast__WEBPACK_IMPORTED_MODULE_6__.toast.show(tip);
+        _Log__WEBPACK_IMPORTED_MODULE_3__.log.warning('🚀' + tip);
+        _Log__WEBPACK_IMPORTED_MODULE_3__.log.log(_Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_检查是否有已注销的用户的说明'));
+        // 等待数据更新和派发完成
+        this.dataChange = false;
+        await _FollowingList__WEBPACK_IMPORTED_MODULE_2__.followingList.getList();
+        await this.waitChange();
+        // 检查已经不存在于关注列表里，并且不是用户手动取消关注的用户
+        const deletedUsers = [];
+        _FollowingList__WEBPACK_IMPORTED_MODULE_2__.followingList.followedUsersInfo.forEach((user) => {
+            if (_FollowingList__WEBPACK_IMPORTED_MODULE_2__.followingList.following.includes(user.id) === false &&
+                user.deleteByUser === false) {
+                deletedUsers.push(user);
+            }
+        });
+        if (deletedUsers.length === 0) {
+            this.tipNoResult();
+            this.tipComplete();
+            return;
+        }
+        const deactivatedUsers = [];
+        for (const user of deletedUsers) {
+            // 之前已经确定注销了的用户
+            if (!user.exist) {
+                deactivatedUsers.push(user);
+            }
+            else {
+                // 检查用户是否已注销
+                const link = _Tools__WEBPACK_IMPORTED_MODULE_9__.Tools.createUserLink(user.id, user.name);
+                _Log__WEBPACK_IMPORTED_MODULE_3__.log.log(_Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_检查用户x是否已注销', link));
+                let flag = false;
+                try {
+                    // 调试用：获取一个不存在的用户的信息
+                    // const json = await API.getUserProfile('16689973', '0')
+                    const json = await _API__WEBPACK_IMPORTED_MODULE_5__.API.getUserProfile(user.id, '0');
+                    if (json.error) {
+                        flag = true;
+                    }
+                    else {
+                        _Log__WEBPACK_IMPORTED_MODULE_3__.log.log(_Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_该用户未注销'));
+                    }
+                }
+                catch (error) {
+                    if (error?.status === 403) {
+                        flag = true;
+                    }
+                }
+                if (flag) {
+                    user.exist = false;
+                    deactivatedUsers.push(user);
+                    _Log__WEBPACK_IMPORTED_MODULE_3__.log.log(_Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_该用户已注销'));
+                }
+                await _utils_Utils__WEBPACK_IMPORTED_MODULE_4__.Utils.sleep(_setting_Settings__WEBPACK_IMPORTED_MODULE_8__.settings.slowCrawlDealy);
+            }
+        }
+        // 调试用：输出未注销的用户，这是为了在没有已注销用户时也能输出结果，以便检查样式
+        // this.output(needCheck.filter(user => user.exist))
+        if (deactivatedUsers.length === 0) {
+            this.tipNoResult();
+        }
+        else {
+            this.output(deactivatedUsers);
+        }
+        this.tipComplete();
+    }
+    output(users) {
+        _Log__WEBPACK_IMPORTED_MODULE_3__.log.log(_Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_已注销用户数量') + `: ${users.length}`);
+        for (const user of users) {
+            let img = '';
+            // 输出头像、id、名字
+            if (user.avatar) {
+                img = `<img src="${user.avatar}" width="50" height="50" style="vertical-align: middle; border-radius: 50%; margin-right: 10px;">`;
+            }
+            const html = `<a href="https://www.pixiv.net/users/${user.id}" target="_blank">
+        ${img}
+        <span style="margin-right: 10px;">${user.id}</span>
+        <span style="margin-right: 10px;">${user.name}</span>
+        </a>`;
+            _Log__WEBPACK_IMPORTED_MODULE_3__.log.log(html, 2);
+        }
+    }
+    tipNoResult() {
+        const msg = _Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_没有找到已注销的用户');
+        _MsgBox__WEBPACK_IMPORTED_MODULE_0__.msgBox.warning(msg);
+        _Log__WEBPACK_IMPORTED_MODULE_3__.log.warning(msg);
+    }
+    tipComplete() {
+        const msg = '✅' + _Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_查找已注销的用户');
+        _Log__WEBPACK_IMPORTED_MODULE_3__.log.success(msg);
+    }
+}
+const findDeactivatedUsers = new FindDeactivatedUsers();
+
+
+
+/***/ }),
+
 /***/ "./src/ts/FollowingList.ts":
 /*!*********************************!*\
   !*** ./src/ts/FollowingList.ts ***!
@@ -4414,6 +4416,8 @@ class FollowingList {
                     id: users.userId,
                     name: users.userName,
                     avatar: users.profileImageUrl,
+                    deleteByUser: false,
+                    exist: true,
                 });
             }
             const type = rest === 'show' ? _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_公开') : _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_非公开');
@@ -17853,7 +17857,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _crawl_CrawlLatestFewWorks__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../crawl/CrawlLatestFewWorks */ "./src/ts/crawl/CrawlLatestFewWorks.ts");
 /* harmony import */ var _pageFunciton_ExportFollowingList__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../pageFunciton/ExportFollowingList */ "./src/ts/pageFunciton/ExportFollowingList.ts");
 /* harmony import */ var _pageFunciton_BatchFollowUser__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../pageFunciton/BatchFollowUser */ "./src/ts/pageFunciton/BatchFollowUser.ts");
-/* harmony import */ var _DeletedFollowingUserView__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../DeletedFollowingUserView */ "./src/ts/DeletedFollowingUserView.ts");
+/* harmony import */ var _FindDeactivatedUsers__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../FindDeactivatedUsers */ "./src/ts/FindDeactivatedUsers.ts");
 // 初始化关注页面、好 P 友页面、粉丝页面
 
 
@@ -17921,7 +17925,7 @@ class InitFollowingPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE_0__
         //   filterInactiveUsers.start()
         // })
         _Tools__WEBPACK_IMPORTED_MODULE_6__.Tools.addBtn('crawlBtns', _Colors__WEBPACK_IMPORTED_MODULE_1__.Colors.bgGreen, '_查找已注销的用户', '', 'findDeactivatedUsers').addEventListener('click', async () => {
-            _DeletedFollowingUserView__WEBPACK_IMPORTED_MODULE_15__.deletedFollowingUserView.check();
+            _FindDeactivatedUsers__WEBPACK_IMPORTED_MODULE_15__.findDeactivatedUsers.check();
         });
     }
     getWantPage() {

@@ -1,11 +1,5 @@
 import browser from 'webextension-polyfill'
-import {
-  DeletedUser,
-  FollowingData,
-  AllUserFollowingData,
-  UserInfo,
-} from './FollowingData'
-import { deletedFollowingUsers } from './DeletedFollowingUsers'
+import { FollowingData, AllUserFollowingData, UserInfo } from './FollowingData'
 import { backgroundAPI } from './backgroundAPI'
 
 interface SetData {
@@ -33,15 +27,6 @@ interface UserOperate {
 class ManageFollowing {
   constructor() {
     this.restore()
-
-    // 定时检查 deletedUsers 是否有更新，如果有更新则重新 dispatch 数据并储存数据
-    setInterval(() => {
-      if (deletedFollowingUsers.changed) {
-        this.dispatchFollowingList()
-        this.storage()
-        deletedFollowingUsers.changed = false
-      }
-    }, 1000)
 
     browser.runtime.onInstalled.addListener(async () => {
       // 每次更新或刷新扩展时尝试读取数据，如果数据不存在则设置数据
@@ -216,13 +201,14 @@ class ManageFollowing {
     const obj = await browser.storage.local.get(this.store)
     if (obj[this.store] && Array.isArray(obj[this.store])) {
       this.data = obj[this.store] as AllUserFollowingData
-      // 这些属性在之前的版本里没有，所以需要添加一下
       this.data.forEach((item) => {
+        // followedUsersInfo 属性是在 18.4.0 版本添加的，在之前的版本里没有，所以需要添加它
         if (item.followedUsersInfo === undefined) {
           item.followedUsersInfo = []
         }
-        if (item.deletedUsers === undefined) {
-          item.deletedUsers = []
+        // 18.3.1 版本添加了 deletedUsers 属性，但之后不再使用，所以需要移除它
+        if ((item as any).deletedUsers) {
+          delete (item as any).deletedUsers
         }
       })
 
@@ -240,12 +226,6 @@ class ManageFollowing {
    * 如果未指定 tab，则向所有的 pixiv 标签页派发
    */
   private async dispatchFollowingList(tab?: browser.Tabs.Tab) {
-    // 调试用：重置 deletedUsers 数据
-    // this.data.forEach(item => {
-    //   item.deletedUsers = []
-    // })
-    // this.storage()
-
     if (!this.restored) {
       setTimeout(() => {
         return this.dispatchFollowingList(tab)
@@ -306,14 +286,11 @@ class ManageFollowing {
       (following) => following.user === data.user
     )
     if (index > -1) {
-      // 对比新旧数据，找出被删除的用户 ID，并将其添加到 deletedUsers 列表中
-      const oldFollowing = this.data[index]
-      deletedFollowingUsers.whenSetFollowingList(oldFollowing, data.following)
-
       // 更新当前登录的用户的关注数据
       this.data[index].following = data.following
       this.data[index].total = data.total
       this.data[index].time = new Date().getTime()
+
       // 历史关注数据采用追加模式，而非直接覆盖
       data.followedUsersInfo.forEach((newUserInfo) => {
         const oldUserInfo = this.data[index].followedUsersInfo.find(
@@ -322,6 +299,8 @@ class ManageFollowing {
         if (oldUserInfo) {
           oldUserInfo.name = newUserInfo.name
           oldUserInfo.avatar = newUserInfo.avatar
+          oldUserInfo.deleteByUser = false
+          oldUserInfo.exist = true
         } else {
           this.data[index].followedUsersInfo.push(newUserInfo)
         }
@@ -333,7 +312,6 @@ class ManageFollowing {
         following: data.following,
         followedUsersInfo: data.followedUsersInfo,
         total: data.total,
-        deletedUsers: [],
         time: new Date().getTime(),
       })
     }
@@ -348,19 +326,15 @@ class ManageFollowing {
     }
 
     if (operate.action === 'add') {
-      deletedFollowingUsers.whenAddFollowing(this.data[i], operate.userID)
-
       this.data[i].following.push(operate.userID)
       this.data[i].total = this.data[i].total + 1
 
       // 当用户手动关注一个用户时，需要把这个用户的信息添加到 followedUsersInfo 里
-      const exist = this.data[i].followedUsersInfo.find(
-        (userInfo) => userInfo.id === operate.userID
+      const userInfo = this.data[i].followedUsersInfo.find(
+        (user) => user.id === operate.userID
       )
-      if (!exist) {
+      if (!userInfo) {
         try {
-          // 调试用：获取一个不存在的用户的信息
-          // const userData = await backgroundAPI.getUserProfile('16689973', '0')
           const userData = await backgroundAPI.getUserProfile(
             operate.userID,
             '0'
@@ -369,6 +343,8 @@ class ManageFollowing {
             id: operate.userID,
             name: userData.body.name || '',
             avatar: userData.body.imageBig || userData.body.image || '',
+            deleteByUser: false,
+            exist: true,
           })
         } catch (error: Error | any) {
           console.log(
@@ -376,10 +352,11 @@ class ManageFollowing {
             error
           )
         }
+      } else {
+        userInfo.deleteByUser = false
+        userInfo.exist = true
       }
     } else if (operate.action === 'remove') {
-      deletedFollowingUsers.whenDeleteFollowing(this.data[i], operate.userID)
-
       // 更新关注列表和总数
       const index = this.data[i].following.findIndex(
         (id) => id === operate.userID
@@ -387,6 +364,15 @@ class ManageFollowing {
       if (index > -1) {
         this.data[i].following.splice(index, 1)
         this.data[i].total = this.data[i].total - 1
+      }
+
+      // 更新 followedUsersInfo 里的状态
+      const userInfo = this.data[i].followedUsersInfo.find(
+        (user) => user.id === operate.userID
+      )
+      if (userInfo) {
+        userInfo.deleteByUser = true
+        userInfo.exist = true
       }
     } else {
       return
