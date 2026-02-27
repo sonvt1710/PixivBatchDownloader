@@ -2723,6 +2723,7 @@ class Config {
     static ImageViewerLI = 'xz-thumb-li';
     /** 默认的命名规则 */
     static defaultNameRule = 'pixiv/{user}-{user_id}/{id}-{title}';
+    static whatIsNewFlagDefault = 'xuejian&saber';
 }
 
 
@@ -4442,7 +4443,7 @@ class FollowingList {
         return res.body.total;
     }
     async receiveData(list) {
-        console.log('receiveData', list);
+        // console.log('receiveData', list)
         const data = list.find((data) => data.user === _store_Store__WEBPACK_IMPORTED_MODULE_5__.store.loggedUserID);
         if (data) {
             this.following = data.following;
@@ -5805,14 +5806,12 @@ __webpack_require__.r(__webpack_exports__);
 // 日志
 class Log {
     constructor() {
-        this.createLogBtn();
-        // 因为日志区域限制了最大高度，可能会出现滚动条
-        // 所以使用定时器，使日志总是滚动到底部
+        this.createToggleBtn();
+        // this.test(1000)
+        // 日志区域限制了最大高度，可能会出现滚动条
+        // 所以使用定时器，让日志滚动到底部
         window.setInterval(() => {
-            if (this.toBottom && this.show) {
-                this.logContent.scrollTop = this.logContent.scrollHeight;
-                this.toBottom = false;
-            }
+            this.scrollToBottom();
         }, 500);
         window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_0__.EVT.list.clearLog, () => {
             this.removeAll();
@@ -5838,19 +5837,19 @@ class Log {
     /**每个日志区域显示多少条日志 */
     // 如果日志条数超出最大值，下载器会创建多个日志区域
     max = 200;
-    /**最新的日志区域里的日志条数。刷新的日志不会计入 */
+    /**最新的日志区域里的日志条数。刷新的日志不会计入；换行标签也不会计入（虽然连续的换行会产生空行，看起来有一行空白，但这只是某一条日志内部的换行，所以不会增加日志条数） */
     count = 0;
     logWrap = document.createElement('div'); // 日志容器的区域，当日志条数很多时，会产生多个日志容器。默认是隐藏的（display: none）
     activeLogWrapID = 'logWrap'; // 当前活跃的日志容器的 id，也是最新的一个日志容器
     logContent = document.createElement('div'); // 日志的主体区域，始终指向最新的那个日志容器内部
     logContentClassName = 'logContent'; // 日志主体区域的类名
     logWrapClassName = 'logWrap'; // 日志容器的类名，只负责样式
-    logWrapFlag = 'logWrapFlag'; // 日志容器的标志，当需要查找日志区域时，使用这个类名而不是 logWrap，因为其他元素可能也具有 logWrap 类名，以应用其样式。
-    /**储存会刷新的日志所使用的元素，可以传入 flag 来区分多个刷新区域 */
+    logWrapFlag = 'logWrapFlag'; // 日志容器的标志，当需要查找日志区域时，使用这个类名而不是 logWrap，因为其他元素可能也具有 logWrap 类名（为了应用其样式）。
+    /**储存会刷新的日志所使用的元素（插槽），可以传入 key 来区分多个刷新区域 */
     // 每个刷新区域使用一个 span 元素，里面的文本会变化
     // 通常用于显示进度，例如 0/10, 1/10, 2/10... 10/10
-    // 如果不传入 flag，那么所有的刷新内容会共用 default 的 span 元素
-    refresh = {
+    // 如果不传入 key，那么所有的刷新内容会共用 default 插槽
+    slots = {
         default: document.createElement('span'),
     };
     /**页面顶部的“显示日志”按钮，点击之后会显示日志区域 */
@@ -5879,8 +5878,12 @@ class Log {
     }
     /** 保存日志历史。刷新的日志不会保存 */
     record = [];
-    toBottom = false; // 指示是否需要把日志滚动到底部。当有日志被添加或刷新，则为 true。滚动到底部之后复位到 false，避免一直滚动到底部。
-    /**日志区域是否显示（即 display 为 block 或者 none）*/
+    /** 指示是否需要把日志滚动到底部 */
+    // 当有日志被添加或刷新，则为 true。滚动到底部之后复位到 false
+    toBottom = false;
+    /** 鼠标是否进入、停留在日志区域，如果是，则不自动滚动到底部 */
+    mouseover = false;
+    /**日志区域是否显示（即 display 状态）*/
     _show = false;
     set show(value) {
         if (value) {
@@ -5911,28 +5914,23 @@ class Log {
         _Colors__WEBPACK_IMPORTED_MODULE_2__.Colors.textWarning,
         _Colors__WEBPACK_IMPORTED_MODULE_2__.Colors.textError,
     ];
-    // 添加日志
-    /*
-    str 日志文本
-    level 日志等级
-    br 换行标签的个数
-    keepShow 是否为持久日志。默认为 true，把这一条日志添加后不再修改。false 则会刷新显示这条日志。
-  
-    level 日志等级：
-    0 normal
-    1 success
-    2 warning
-    3 error
+    /**
+    添加一条日志
+    @param str 日志文本
+    @param level 日志等级。0: normal, 1: success, 2: warning, 3: error
+    @param br 换行标签的数量，默认值为 1
+    @param persistent 是否为持久日志。默认为 true，意思是这条日志的内容不会变化，添加后会持久化显示。false 则说明这条日志的内容会发生变化，所以这条日志的内容可以刷新显示。
+    @param key 当日志需要刷新显示时（即 persistent 为 false），可以为其设置一个特有的名称，这样可以同时存在多个具有不同名称的刷新区域（插槽）。如果不设置名称，则使用默认值 'default'。所有未设置名称的刷新日志会共用 default 区域（插槽）。
     */
-    add(str, level, br, keepShow, refreshFlag = 'default') {
+    add(str, level, br = 1, persistent = true, key = 'default') {
         this.createLogArea();
         let span = document.createElement('span');
-        if (!keepShow) {
-            if (this.refresh[refreshFlag] === undefined) {
-                this.refresh[refreshFlag] = span;
+        if (!persistent) {
+            if (this.slots[key] === undefined) {
+                this.slots[key] = span;
             }
             else {
-                span = this.refresh[refreshFlag];
+                span = this.slots[key];
             }
             // 虽然刷新的日志不计入总数，但如果某个日志区域里的第一条日志就是刷新日志，那么此时必须把 count 加 1
             // 否则会因为 count 为 0 而导致这个日志区域被判断为没有内容，从而不会显示
@@ -5961,31 +5959,31 @@ class Log {
         this.logContent.appendChild(span);
         this.toBottom = true; // 需要把日志滚动到底部
         // 把持久日志保存到记录里
-        if (keepShow) {
+        if (persistent) {
             this.record.push({ html: span.outerHTML, level });
         }
     }
-    log(str, br = 1, keepShow = true, refreshFlag = 'default') {
-        this.add(str, 0, br, keepShow, refreshFlag);
+    log(str, br = 1, persistent = true, key = 'default') {
+        this.add(str, 0, br, persistent, key);
     }
-    success(str, br = 1, keepShow = true, refreshFlag = 'default') {
-        this.add(str, 1, br, keepShow, refreshFlag);
+    success(str, br = 1, persistent = true, key = 'default') {
+        this.add(str, 1, br, persistent, key);
     }
-    warning(str, br = 1, keepShow = true, refreshFlag = 'default') {
-        this.add(str, 2, br, keepShow, refreshFlag);
+    warning(str, br = 1, persistent = true, key = 'default') {
+        this.add(str, 2, br, persistent, key);
     }
-    error(str, br = 1, keepShow = true, refreshFlag = 'default') {
-        this.add(str, 3, br, keepShow, refreshFlag);
+    error(str, br = 1, persistent = true, key = 'default') {
+        this.add(str, 3, br, persistent, key);
     }
     /**将一条刷新的日志元素持久化 */
     // 例如当某个进度显示到 10/10 的时候，就不会再变化了，此时应该将其持久化
     // 其实就是下载器解除了对它的引用，这样它的内容就不会再变化了
-    // 并且下载器会为这个 flag 生成一个新的 span 元素待用
-    persistentRefresh(refreshFlag = 'default') {
-        this.refresh[refreshFlag] = document.createElement('span');
+    // 并且下载器会为这个 key 生成一个新的 span 元素待用
+    persistentRefresh(key = 'default') {
+        this.slots[key] = document.createElement('span');
     }
     /**在页面顶部创建一个“显示日志”按钮 */
-    createLogBtn() {
+    createToggleBtn() {
         const html = `<div id="logBtn" class="logBtn"><span data-xztext="_显示日志"></span>&nbsp;<span>(L)</span></div>`;
         document.body.insertAdjacentHTML('beforebegin', html);
         this.logBtn = document.getElementById('logBtn');
@@ -6089,10 +6087,24 @@ class Log {
             this.show = this.show;
             // 如果上一个日志区域是显示的，就需要设置 this.show = true 使新的区域也显示
             // 这就是为什么要执行 this.show = this.show
+            // 当鼠标进入日志区域时，不自动滚动到底部，这样可以保持显示区域的内容不变，便于用户查看和选择需要的日志
+            this.logWrap.addEventListener('mouseenter', () => {
+                this.mouseover = true;
+            });
+            this.logWrap.addEventListener('mouseleave', () => {
+                this.mouseover = false;
+            });
+            // 当用户切换到其他标签页或其他应用程序时（不论是使用鼠标还是快捷键），浏览器都会自动触发 mouseleave 事件，所以 mouseover 会自动变成 false。
             // 监听新的日志区域的可见性
             _utils_Utils__WEBPACK_IMPORTED_MODULE_7__.Utils.observeElement(this.logWrap, (value) => {
                 this.isVisible = value;
             }, _Config__WEBPACK_IMPORTED_MODULE_10__.Config.mobile ? 0 : 1);
+        }
+    }
+    scrollToBottom() {
+        if (this.show && this.toBottom && !this.mouseover) {
+            this.logContent.scrollTop = this.logContent.scrollHeight;
+            this.toBottom = false;
         }
     }
     removeAll() {
@@ -6166,6 +6178,19 @@ class Log {
         _Toast__WEBPACK_IMPORTED_MODULE_5__.toast.success(msg, {
             position: 'topCenter',
         });
+    }
+    /** 调试用：连续输出大量日志
+     * @param total 指定输出多少条日志。默认值为 1000
+     */
+    test(total = 1000) {
+        window.setTimeout(async () => {
+            let num = 0;
+            while (num < total) {
+                await _utils_Utils__WEBPACK_IMPORTED_MODULE_7__.Utils.sleep(100);
+                this.add('saber', 1, 1, true);
+                num++;
+            }
+        }, 1000);
     }
 }
 const log = new Log();
@@ -10382,7 +10407,7 @@ class ShowWhatIsNew {
     show(msg) {
         // 如果这个标记是初始值，说明这是用户首次安装这个扩展，或者重置了设置，此时不显示版本更新提示
         // 因为对于新安装的用户来说，没必要显示版本更新提示
-        if (_setting_Settings__WEBPACK_IMPORTED_MODULE_5__.settings.whatIsNewFlag === 'xuejian&saber') {
+        if (_setting_Settings__WEBPACK_IMPORTED_MODULE_5__.settings.whatIsNewFlag === _Config__WEBPACK_IMPORTED_MODULE_1__.Config.whatIsNewFlagDefault) {
             (0,_setting_Settings__WEBPACK_IMPORTED_MODULE_5__.setSetting)('whatIsNewFlag', this.flag);
             return;
         }
@@ -13288,7 +13313,6 @@ class InitPageBase {
         if (!this.confirmRecrawl()) {
             return;
         }
-        _EVT__WEBPACK_IMPORTED_MODULE_6__.EVT.fire('clearLog');
         _Log__WEBPACK_IMPORTED_MODULE_5__.log.success('🚀' + _Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_开始抓取'));
         _Toast__WEBPACK_IMPORTED_MODULE_17__.toast.show(_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_开始抓取'), {
             position: 'center',
@@ -13332,7 +13356,6 @@ class InitPageBase {
             if (!this.confirmRecrawl()) {
                 return;
             }
-            _EVT__WEBPACK_IMPORTED_MODULE_6__.EVT.fire('clearLog');
             _Log__WEBPACK_IMPORTED_MODULE_5__.log.success('🚀' + _Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_开始抓取'));
             _Toast__WEBPACK_IMPORTED_MODULE_17__.toast.show(_Language__WEBPACK_IMPORTED_MODULE_0__.lang.transl('_开始抓取'), {
                 bgColor: _Colors__WEBPACK_IMPORTED_MODULE_1__.Colors.bgBlue,
@@ -15898,7 +15921,7 @@ class InitSearchArtworkPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE
             }
         }
         _Log__WEBPACK_IMPORTED_MODULE_8__.log.log('➡️' +
-            _Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_列表页抓取进度2', this.listPageFinished.toString(), this.needCrawlPageCount.toString()), 1, false);
+            _Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_列表页抓取进度2', this.listPageFinished.toString(), this.needCrawlPageCount.toString()), 1, false, 'crawlArtworkSearchPageListPage');
         if (this.sendCrawlTaskCount + 1 <= this.needCrawlPageCount) {
             // 继续发送抓取任务（+1 是因为 sendCrawlTaskCount 从 0 开始）
             if (_store_States__WEBPACK_IMPORTED_MODULE_13__.states.slowCrawlMode) {
@@ -19983,7 +20006,7 @@ class InitSearchNovelPage extends _crawl_InitPageBase__WEBPACK_IMPORTED_MODULE_0
             }
         }
         _Log__WEBPACK_IMPORTED_MODULE_6__.log.log('➡️' +
-            _Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_列表页抓取进度2', this.listPageFinished.toString(), this.needCrawlPageCount.toString()), 1, false);
+            _Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_列表页抓取进度2', this.listPageFinished.toString(), this.needCrawlPageCount.toString()), 1, false, 'crawlNovelSearchPageListPage');
         if (this.sendCrawlTaskCount + 1 <= this.needCrawlPageCount) {
             // 继续发送抓取任务（+1 是因为 sendCrawlTaskCount 从 0 开始）
             if (_store_States__WEBPACK_IMPORTED_MODULE_14__.states.slowCrawlMode) {
@@ -40746,7 +40769,7 @@ class Settings {
         showOriginImage: true,
         showOriginImageSize: 'original',
         tipHowToUse: true,
-        whatIsNewFlag: 'xuejian&saber',
+        whatIsNewFlag: _Config__WEBPACK_IMPORTED_MODULE_5__.Config.whatIsNewFlagDefault,
         replaceSquareThumb: true,
         notFolderWhenOneFile: false,
         noSerialNoForSingleImg: true,

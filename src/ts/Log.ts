@@ -15,15 +15,14 @@ import { pageType } from './PageType'
 // 日志
 class Log {
   constructor() {
-    this.createLogBtn()
+    this.createToggleBtn()
 
-    // 因为日志区域限制了最大高度，可能会出现滚动条
-    // 所以使用定时器，使日志总是滚动到底部
+    // this.test(1000)
+
+    // 日志区域限制了最大高度，可能会出现滚动条
+    // 所以使用定时器，让日志滚动到底部
     window.setInterval(() => {
-      if (this.toBottom && this.show) {
-        this.logContent.scrollTop = this.logContent.scrollHeight
-        this.toBottom = false
-      }
+      this.scrollToBottom()
     }, 500)
 
     window.addEventListener(EVT.list.clearLog, () => {
@@ -57,7 +56,7 @@ class Log {
   // 如果日志条数超出最大值，下载器会创建多个日志区域
   private max = 200
 
-  /**最新的日志区域里的日志条数。刷新的日志不会计入 */
+  /**最新的日志区域里的日志条数。刷新的日志不会计入；换行标签也不会计入（虽然连续的换行会产生空行，看起来有一行空白，但这只是某一条日志内部的换行，所以不会增加日志条数） */
   private count = 0
 
   private logWrap = document.createElement('div') // 日志容器的区域，当日志条数很多时，会产生多个日志容器。默认是隐藏的（display: none）
@@ -65,13 +64,13 @@ class Log {
   private logContent = document.createElement('div') // 日志的主体区域，始终指向最新的那个日志容器内部
   private logContentClassName = 'logContent' // 日志主体区域的类名
   private logWrapClassName = 'logWrap' // 日志容器的类名，只负责样式
-  private logWrapFlag = 'logWrapFlag' // 日志容器的标志，当需要查找日志区域时，使用这个类名而不是 logWrap，因为其他元素可能也具有 logWrap 类名，以应用其样式。
+  private logWrapFlag = 'logWrapFlag' // 日志容器的标志，当需要查找日志区域时，使用这个类名而不是 logWrap，因为其他元素可能也具有 logWrap 类名（为了应用其样式）。
 
-  /**储存会刷新的日志所使用的元素，可以传入 flag 来区分多个刷新区域 */
+  /**储存会刷新的日志所使用的元素（插槽），可以传入 key 来区分多个刷新区域 */
   // 每个刷新区域使用一个 span 元素，里面的文本会变化
   // 通常用于显示进度，例如 0/10, 1/10, 2/10... 10/10
-  // 如果不传入 flag，那么所有的刷新内容会共用 default 的 span 元素
-  private refresh: { [key: string]: HTMLElement } = {
+  // 如果不传入 key，那么所有的刷新内容会共用 default 插槽
+  private slots: Record<string, HTMLElement> = {
     default: document.createElement('span'),
   }
 
@@ -106,9 +105,14 @@ class Log {
   /** 保存日志历史。刷新的日志不会保存 */
   private record: { html: string; level: number }[] = []
 
-  private toBottom = false // 指示是否需要把日志滚动到底部。当有日志被添加或刷新，则为 true。滚动到底部之后复位到 false，避免一直滚动到底部。
+  /** 指示是否需要把日志滚动到底部 */
+  // 当有日志被添加或刷新，则为 true。滚动到底部之后复位到 false
+  private toBottom = false
 
-  /**日志区域是否显示（即 display 为 block 或者 none）*/
+  /** 鼠标是否进入、停留在日志区域，如果是，则不自动滚动到底部 */
+  private mouseover = false
+
+  /**日志区域是否显示（即 display 状态）*/
   private _show = false
 
   private set show(value: boolean) {
@@ -144,33 +148,28 @@ class Log {
     Colors.textError,
   ]
 
-  // 添加日志
-  /*
-  str 日志文本
-  level 日志等级
-  br 换行标签的个数
-  keepShow 是否为持久日志。默认为 true，把这一条日志添加后不再修改。false 则会刷新显示这条日志。
-
-  level 日志等级：
-  0 normal
-  1 success
-  2 warning
-  3 error
+  /**
+  添加一条日志
+  @param str 日志文本
+  @param level 日志等级。0: normal, 1: success, 2: warning, 3: error
+  @param br 换行标签的数量，默认值为 1
+  @param persistent 是否为持久日志。默认为 true，意思是这条日志的内容不会变化，添加后会持久化显示。false 则说明这条日志的内容会发生变化，所以这条日志的内容可以刷新显示。
+  @param key 当日志需要刷新显示时（即 persistent 为 false），可以为其设置一个特有的名称，这样可以同时存在多个具有不同名称的刷新区域（插槽）。如果不设置名称，则使用默认值 'default'。所有未设置名称的刷新日志会共用 default 区域（插槽）。
   */
   private add(
     str: string,
     level: number,
-    br: number,
-    keepShow: boolean,
-    refreshFlag: string = 'default'
+    br: number = 1,
+    persistent: boolean = true,
+    key: string = 'default'
   ) {
     this.createLogArea()
     let span = document.createElement('span')
-    if (!keepShow) {
-      if (this.refresh[refreshFlag] === undefined) {
-        this.refresh[refreshFlag] = span
+    if (!persistent) {
+      if (this.slots[key] === undefined) {
+        this.slots[key] = span
       } else {
-        span = this.refresh[refreshFlag]
+        span = this.slots[key]
       }
       // 虽然刷新的日志不计入总数，但如果某个日志区域里的第一条日志就是刷新日志，那么此时必须把 count 加 1
       // 否则会因为 count 为 0 而导致这个日志区域被判断为没有内容，从而不会显示
@@ -204,7 +203,7 @@ class Log {
     this.toBottom = true // 需要把日志滚动到底部
 
     // 把持久日志保存到记录里
-    if (keepShow) {
+    if (persistent) {
       this.record.push({ html: span.outerHTML, level })
     }
   }
@@ -212,49 +211,49 @@ class Log {
   public log(
     str: string,
     br: number = 1,
-    keepShow: boolean = true,
-    refreshFlag = 'default'
+    persistent: boolean = true,
+    key = 'default'
   ) {
-    this.add(str, 0, br, keepShow, refreshFlag)
+    this.add(str, 0, br, persistent, key)
   }
 
   public success(
     str: string,
     br: number = 1,
-    keepShow: boolean = true,
-    refreshFlag = 'default'
+    persistent: boolean = true,
+    key = 'default'
   ) {
-    this.add(str, 1, br, keepShow, refreshFlag)
+    this.add(str, 1, br, persistent, key)
   }
 
   public warning(
     str: string,
     br: number = 1,
-    keepShow: boolean = true,
-    refreshFlag = 'default'
+    persistent: boolean = true,
+    key = 'default'
   ) {
-    this.add(str, 2, br, keepShow, refreshFlag)
+    this.add(str, 2, br, persistent, key)
   }
 
   public error(
     str: string,
     br: number = 1,
-    keepShow: boolean = true,
-    refreshFlag = 'default'
+    persistent: boolean = true,
+    key = 'default'
   ) {
-    this.add(str, 3, br, keepShow, refreshFlag)
+    this.add(str, 3, br, persistent, key)
   }
 
   /**将一条刷新的日志元素持久化 */
   // 例如当某个进度显示到 10/10 的时候，就不会再变化了，此时应该将其持久化
   // 其实就是下载器解除了对它的引用，这样它的内容就不会再变化了
-  // 并且下载器会为这个 flag 生成一个新的 span 元素待用
-  public persistentRefresh(refreshFlag: string = 'default') {
-    this.refresh[refreshFlag] = document.createElement('span')
+  // 并且下载器会为这个 key 生成一个新的 span 元素待用
+  public persistentRefresh(key: string = 'default') {
+    this.slots[key] = document.createElement('span')
   }
 
   /**在页面顶部创建一个“显示日志”按钮 */
-  private createLogBtn() {
+  private createToggleBtn() {
     const html = `<div id="logBtn" class="logBtn"><span data-xztext="_显示日志"></span>&nbsp;<span>(L)</span></div>`
     document.body.insertAdjacentHTML('beforebegin', html)
     this.logBtn = document.getElementById('logBtn') as HTMLDivElement
@@ -378,6 +377,16 @@ class Log {
       // 如果上一个日志区域是显示的，就需要设置 this.show = true 使新的区域也显示
       // 这就是为什么要执行 this.show = this.show
 
+      // 当鼠标进入日志区域时，不自动滚动到底部，这样可以保持显示区域的内容不变，便于用户查看和选择需要的日志
+      this.logWrap.addEventListener('mouseenter', () => {
+        this.mouseover = true
+      })
+
+      this.logWrap.addEventListener('mouseleave', () => {
+        this.mouseover = false
+      })
+      // 当用户切换到其他标签页或其他应用程序时（不论是使用鼠标还是快捷键），浏览器都会自动触发 mouseleave 事件，所以 mouseover 会自动变成 false。
+
       // 监听新的日志区域的可见性
       Utils.observeElement(
         this.logWrap,
@@ -386,6 +395,13 @@ class Log {
         },
         Config.mobile ? 0 : 1
       )
+    }
+  }
+
+  private scrollToBottom() {
+    if (this.show && this.toBottom && !this.mouseover) {
+      this.logContent.scrollTop = this.logContent.scrollHeight
+      this.toBottom = false
     }
   }
 
@@ -483,6 +499,20 @@ class Log {
     toast.success(msg, {
       position: 'topCenter',
     })
+  }
+
+  /** 调试用：连续输出大量日志
+   * @param total 指定输出多少条日志。默认值为 1000
+   */
+  private test(total = 1000) {
+    window.setTimeout(async () => {
+      let num = 0
+      while (num < total) {
+        await Utils.sleep(100)
+        this.add('saber', 1, 1, true)
+        num++
+      }
+    }, 1000)
   }
 }
 

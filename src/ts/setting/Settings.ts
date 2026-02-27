@@ -716,7 +716,7 @@ class Settings {
     showOriginImage: true,
     showOriginImageSize: 'original',
     tipHowToUse: true,
-    whatIsNewFlag: 'xuejian&saber',
+    whatIsNewFlag: Config.whatIsNewFlagDefault,
     replaceSquareThumb: true,
     notFolderWhenOneFile: false,
     noSerialNoForSingleImg: true,

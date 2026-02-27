@@ -604,7 +604,8 @@ class InitSearchArtworkPage extends InitPageBase {
           this.needCrawlPageCount.toString()
         ),
       1,
-      false
+      false,
+      'crawlArtworkSearchPageListPage'
     )
 
     if (this.sendCrawlTaskCount + 1 <= this.needCrawlPageCount) {

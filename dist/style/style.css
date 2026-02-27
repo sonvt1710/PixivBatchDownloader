@@ -1591,7 +1591,6 @@ body.mobile #quickCrawlBtn {
   display: none;
   color: #333;
   background: #fff;
-  padding: 10px 0px;
 }
 .logContent {
   width: 96vw;
@@ -1601,6 +1600,7 @@ body.mobile #quickCrawlBtn {
   margin: 0 auto;
   margin-bottom: 20px;
   font-size: 14px;
+  padding: 10px 30px;
 }
 .logContent span {
   line-height: 1.4;

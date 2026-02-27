@@ -46,8 +46,7 @@ class ShowWhatIsNew {
 
   private show(msg: string) {
     // 如果这个标记是初始值，说明这是用户首次安装这个扩展，或者重置了设置，此时不显示版本更新提示
-    // 因为对于新安装的用户来说，没必要显示版本更新提示
-    if (settings.whatIsNewFlag === 'xuejian&saber') {
+    if (settings.whatIsNewFlag === Config.whatIsNewFlagDefault) {
       setSetting('whatIsNewFlag', this.flag)
       return
     }

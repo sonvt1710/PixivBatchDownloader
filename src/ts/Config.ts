@@ -37,6 +37,7 @@ class Config {
   static readonly ImageViewerLI = 'xz-thumb-li'
   /** 默认的命名规则 */
   static readonly defaultNameRule = 'pixiv/{user}-{user_id}/{id}-{title}'
+  static readonly whatIsNewFlagDefault = 'xuejian&saber'
 }
 
 export { Config }

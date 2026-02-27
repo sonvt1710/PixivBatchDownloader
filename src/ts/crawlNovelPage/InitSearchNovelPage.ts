@@ -397,7 +397,8 @@ class InitSearchNovelPage extends InitPageBase {
           this.needCrawlPageCount.toString()
         ),
       1,
-      false
+      false,
+      'crawlNovelSearchPageListPage'
     )
 
     if (this.sendCrawlTaskCount + 1 <= this.needCrawlPageCount) {

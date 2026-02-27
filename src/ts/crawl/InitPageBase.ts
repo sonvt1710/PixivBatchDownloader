@@ -194,8 +194,6 @@ abstract class InitPageBase {
       return
     }
 
-    EVT.fire('clearLog')
-
     log.success('🚀' + lang.transl('_开始抓取'))
     toast.show(lang.transl('_开始抓取'), {
       position: 'center',
@@ -250,8 +248,6 @@ abstract class InitPageBase {
       if (!this.confirmRecrawl()) {
         return
       }
-
-      EVT.fire('clearLog')
 
       log.success('🚀' + lang.transl('_开始抓取'))
       toast.show(lang.transl('_开始抓取'), {

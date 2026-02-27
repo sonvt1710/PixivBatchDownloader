@@ -9,7 +9,6 @@
   display: none;
   color: #333;
   background: #fff;
-  padding: 10px 0px;
 }
 
 .logContent {
@@ -20,6 +19,9 @@
   margin: 0 auto;
   margin-bottom: 20px;
   font-size: 14px;
+  // 在内容区域周围添加 padding，是为了让用户使用鼠标选择文字内容时，点击左键时的坐标依然属于 logContent
+  // 如果不加 padding，那么鼠标在文字之外点击时就超出了 logContent 区域，会导致日志区域隐藏，无法选择和复制文字
+  padding: 10px 30px;
 
   span {
     line-height: 1.4;
