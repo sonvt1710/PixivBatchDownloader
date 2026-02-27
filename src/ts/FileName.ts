@@ -398,8 +398,7 @@ class FileName {
 
   // 生成 {p_num} 标记的值
   private createPNum(data: Result) {
-    // 只有插画和漫画有编号
-    if (data.type === 0 || data.type === 1) {
+    if (data.type === 0 || data.type === 1 || data.type === 2) {
       const index = data.index ?? Tools.getResultIndex(data)
       // 处理第一张图不带序号的情况
       if (index === 0 && settings.noSerialNo) {

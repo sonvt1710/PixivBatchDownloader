@@ -61,7 +61,7 @@ export interface ResultOptional {
   /**这个作品的最后一次上传（修改）日期 */
   uploadDate?: string
   /**作品类型
-   *  0 插画
+   * 0 插画
    * 1 漫画
    * 2 动图
    * 3 小说

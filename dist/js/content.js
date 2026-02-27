@@ -3995,8 +3995,7 @@ class FileName {
     }
     // 生成 {p_num} 标记的值
     createPNum(data) {
-        // 只有插画和漫画有编号
-        if (data.type === 0 || data.type === 1) {
+        if (data.type === 0 || data.type === 1 || data.type === 2) {
             const index = data.index ?? _Tools__WEBPACK_IMPORTED_MODULE_7__.Tools.getResultIndex(data);
             // 处理第一张图不带序号的情况
             if (index === 0 && _setting_Settings__WEBPACK_IMPORTED_MODULE_0__.settings.noSerialNo) {
