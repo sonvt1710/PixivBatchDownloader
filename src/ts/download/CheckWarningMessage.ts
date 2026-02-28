@@ -70,7 +70,7 @@ class CheckWarningMessage {
             msgData.latest_content.includes('14')
           ) {
             // 如果找到了官方账号发送的警告消息，则判断时间
-            const now = new Date().getTime()
+            const now = Date.now()
             const msgTime = Number.parseInt(msgData.modified_at + '000')
             if (now - msgTime < this.checkTimeRange) {
               return resolve(true)

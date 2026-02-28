@@ -451,7 +451,7 @@ class DownloadControl {
 
     this.setDownloaded()
 
-    this.taskBatch = new Date().getTime() // 修改本批下载任务的标记
+    this.taskBatch = Date.now() // 修改本批下载任务的标记
 
     this.setDownloadThread()
 

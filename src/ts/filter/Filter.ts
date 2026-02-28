@@ -742,7 +742,7 @@ class Filter {
 
     // 检查日均收藏
     const createTime = new Date(date).getTime()
-    const nowTime = new Date().getTime()
+    const nowTime = Date.now()
 
     // 如果作品发表时间太短（小于 4 小时）
     if (nowTime - createTime < this.minimumTime) {

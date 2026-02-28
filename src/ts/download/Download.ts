@@ -270,7 +270,7 @@ class Download {
       if (xhr.status !== 200) {
         // 正常下载完毕的状态码是 200
         // 储存重试的时间戳等信息
-        this.retryInterval.push(new Date().getTime() - this.lastRequestTime)
+        this.retryInterval.push(Date.now() - this.lastRequestTime)
 
         progressBar.errorColor(this.progressBarIndex, true)
         this.retry++
@@ -367,7 +367,7 @@ class Download {
       file = null as any
     })
 
-    this.lastRequestTime = new Date().getTime()
+    this.lastRequestTime = Date.now()
     // 没有设置 timeout，默认值是 0，不会超时
     xhr.send()
   }

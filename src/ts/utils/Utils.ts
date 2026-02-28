@@ -400,7 +400,7 @@ class Utils {
     const context = this
     return function () {
       const args = arguments
-      const now = new Date().getTime()
+      const now = Date.now()
       if (now - time >= delay) {
         time = now
         return func.apply(context, args)

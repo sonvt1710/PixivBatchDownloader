@@ -84,11 +84,11 @@ abstract class InitPageBase {
     })
 
     EVT.bindOnce('crawlCompleteTime', EVT.list.crawlComplete, () => {
-      states.crawlCompleteTime = new Date().getTime()
+      states.crawlCompleteTime = Date.now()
     })
 
     EVT.bindOnce('downloadCompleteTime', EVT.list.downloadComplete, () => {
-      states.downloadCompleteTime = new Date().getTime()
+      states.downloadCompleteTime = Date.now()
     })
 
     // 监听下载 id 列表的事件

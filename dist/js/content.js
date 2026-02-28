@@ -1414,7 +1414,7 @@ class API {
     // 获取插画 漫画 动图 的详细信息
     // 额外添加了时间戳，以避免在短时间内获取同一作品数据时，浏览器直接使用缓存的数据
     static getArtworkData(id, unlisted = false) {
-        const url = `https://www.pixiv.net/ajax/illust/${unlisted ? 'unlisted/' : ''}${id}?time=${new Date().getTime()}`;
+        const url = `https://www.pixiv.net/ajax/illust/${unlisted ? 'unlisted/' : ''}${id}?time=${Date.now()}`;
         return this.fetch(url);
     }
     // 获取动图的元数据
@@ -1425,7 +1425,7 @@ class API {
     // 获取小说的详细信息
     // 额外添加了时间戳，以避免在短时间内获取同一作品数据时，浏览器直接使用缓存的数据
     static getNovelData(id, unlisted = false) {
-        const url = `https://www.pixiv.net/ajax/novel/${unlisted ? 'unlisted/' : ''}${id}?time=${new Date().getTime()}`;
+        const url = `https://www.pixiv.net/ajax/novel/${unlisted ? 'unlisted/' : ''}${id}?time=${Date.now()}`;
         return this.fetch(url);
     }
     // 获取相关作品
@@ -5333,7 +5333,7 @@ class Input {
     init(option) {
         const _option = Object.assign(this.defultOption, option || {});
         this.value = _option.value;
-        this.id = `input` + new Date().getTime();
+        this.id = `input` + Date.now();
         this.create(_option);
     }
     wrapHtmlExample = `
@@ -8685,7 +8685,7 @@ class RequestSponsorship {
         window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_0__.EVT.list.settingInitialized, () => {
             // 赋予初始值
             if (_setting_Settings__WEBPACK_IMPORTED_MODULE_3__.settings.requestSponsorshipTime === 0) {
-                (0,_setting_Settings__WEBPACK_IMPORTED_MODULE_3__.setSetting)('requestSponsorshipTime', new Date().getTime() + this.interval);
+                (0,_setting_Settings__WEBPACK_IMPORTED_MODULE_3__.setSetting)('requestSponsorshipTime', Date.now() + this.interval);
             }
             window.setTimeout(() => {
                 this.check();
@@ -8695,7 +8695,7 @@ class RequestSponsorship {
     // 30 * 24 * 60 * 60 * 1000
     interval = 2592000000;
     check() {
-        const now = new Date().getTime();
+        const now = Date.now();
         if (now >= _setting_Settings__WEBPACK_IMPORTED_MODULE_3__.settings.requestSponsorshipTime) {
             _MsgBox__WEBPACK_IMPORTED_MODULE_2__.msgBox.once('request sponsorship', _Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_赞助方式提示'), 'show', {
                 title: _Language__WEBPACK_IMPORTED_MODULE_1__.lang.transl('_赞助我'),
@@ -10913,7 +10913,7 @@ class Token {
     }
     interval = 300000; // 两次更新之间的最小时间间隔。目前设置为 5 分钟
     async updateToken() {
-        const nowTime = new Date().getTime();
+        const nowTime = Date.now();
         const lastTimeStr = localStorage.getItem(this.timeStore);
         if (this.token &&
             lastTimeStr &&
@@ -10930,7 +10930,7 @@ class Token {
             if (match && match[1] && match[1].length === 32) {
                 this.token = match[1];
                 localStorage.setItem(this.tokenStore, this.token);
-                localStorage.setItem(this.timeStore, new Date().getTime().toString());
+                localStorage.setItem(this.timeStore, Date.now().toString());
                 return;
             }
         }
@@ -10947,7 +10947,7 @@ class Token {
             }
             if (this.token) {
                 localStorage.setItem(this.tokenStore, this.token);
-                localStorage.setItem(this.timeStore, new Date().getTime().toString());
+                localStorage.setItem(this.timeStore, Date.now().toString());
             }
             else {
                 console.error('UpdateToken failed: no token found!');
@@ -13236,10 +13236,10 @@ class InitPageBase {
             }
         });
         _EVT__WEBPACK_IMPORTED_MODULE_6__.EVT.bindOnce('crawlCompleteTime', _EVT__WEBPACK_IMPORTED_MODULE_6__.EVT.list.crawlComplete, () => {
-            _store_States__WEBPACK_IMPORTED_MODULE_9__.states.crawlCompleteTime = new Date().getTime();
+            _store_States__WEBPACK_IMPORTED_MODULE_9__.states.crawlCompleteTime = Date.now();
         });
         _EVT__WEBPACK_IMPORTED_MODULE_6__.EVT.bindOnce('downloadCompleteTime', _EVT__WEBPACK_IMPORTED_MODULE_6__.EVT.list.downloadComplete, () => {
-            _store_States__WEBPACK_IMPORTED_MODULE_9__.states.downloadCompleteTime = new Date().getTime();
+            _store_States__WEBPACK_IMPORTED_MODULE_9__.states.downloadCompleteTime = Date.now();
         });
         // 监听下载 id 列表的事件
         _EVT__WEBPACK_IMPORTED_MODULE_6__.EVT.bindOnce('crawlIdList', _EVT__WEBPACK_IMPORTED_MODULE_6__.EVT.list.crawlIdList, (ev) => {
@@ -20480,7 +20480,7 @@ class CheckWarningMessage {
                     if (msgData.latest_content.includes('policies.pixiv.net') &&
                         msgData.latest_content.includes('14')) {
                         // 如果找到了官方账号发送的警告消息，则判断时间
-                        const now = new Date().getTime();
+                        const now = Date.now();
                         const msgTime = Number.parseInt(msgData.modified_at + '000');
                         if (now - msgTime < this.checkTimeRange) {
                             return resolve(true);
@@ -20745,7 +20745,7 @@ class Download {
             if (xhr.status !== 200) {
                 // 正常下载完毕的状态码是 200
                 // 储存重试的时间戳等信息
-                this.retryInterval.push(new Date().getTime() - this.lastRequestTime);
+                this.retryInterval.push(Date.now() - this.lastRequestTime);
                 _ProgressBar__WEBPACK_IMPORTED_MODULE_6__.progressBar.errorColor(this.progressBarIndex, true);
                 this.retry++;
                 if (this.retry >= _Config__WEBPACK_IMPORTED_MODULE_12__.Config.retryMax) {
@@ -20815,7 +20815,7 @@ class Download {
             xhr = null;
             file = null;
         });
-        this.lastRequestTime = new Date().getTime();
+        this.lastRequestTime = Date.now();
         // 没有设置 timeout，默认值是 0，不会超时
         xhr.send();
     }
@@ -21225,7 +21225,7 @@ class DownloadControl {
         this.reset();
         _MsgBox__WEBPACK_IMPORTED_MODULE_21__.msgBox.resetOnce(this.msgFlag);
         this.setDownloaded();
-        this.taskBatch = new Date().getTime(); // 修改本批下载任务的标记
+        this.taskBatch = Date.now(); // 修改本批下载任务的标记
         this.setDownloadThread();
         _EVT__WEBPACK_IMPORTED_MODULE_1__.EVT.fire('downloadStart');
         // 建立并发下载线程
@@ -21494,8 +21494,7 @@ class DownloadInterval {
         this.allowDownloadTime = 0;
     }
     addTime() {
-        this.allowDownloadTime =
-            new Date().getTime() + _setting_Settings__WEBPACK_IMPORTED_MODULE_3__.settings.downloadInterval * 1000;
+        this.allowDownloadTime = Date.now() + _setting_Settings__WEBPACK_IMPORTED_MODULE_3__.settings.downloadInterval * 1000;
     }
     wait() {
         return new Promise(async (resolve) => {
@@ -21505,13 +21504,13 @@ class DownloadInterval {
                 return resolve(true);
             }
             // 可以立即开始下载
-            if (new Date().getTime() >= this.allowDownloadTime) {
+            if (Date.now() >= this.allowDownloadTime) {
                 this.addTime();
                 return resolve(true);
             }
             // 需要等待
             const timer = window.setInterval(() => {
-                if (new Date().getTime() >= this.allowDownloadTime) {
+                if (Date.now() >= this.allowDownloadTime) {
                     window.clearInterval(timer);
                     this.addTime();
                     return resolve(true);
@@ -24129,7 +24128,7 @@ class Resume {
             return;
         }
         _Log__WEBPACK_IMPORTED_MODULE_1__.log.warning(_Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_正在保存抓取结果'));
-        this.taskId = new Date().getTime();
+        this.taskId = Date.now();
         this.part = [];
         await this.saveTaskData();
         // 保存 meta 数据
@@ -24234,7 +24233,7 @@ class Resume {
         // 数据的过期时间，设置为 30 天。30*24*60*60*1000
         const expiryTime = 2592000000;
         // 每隔一天检查一次数据是否过期
-        const nowTime = new Date().getTime();
+        const nowTime = Date.now();
         let lastCheckTime = 0;
         const storeName = 'lastCheckExired';
         const data = localStorage.getItem(storeName);
@@ -26295,7 +26294,7 @@ class Filter {
         }
         // 检查日均收藏
         const createTime = new Date(date).getTime();
-        const nowTime = new Date().getTime();
+        const nowTime = Date.now();
         // 如果作品发表时间太短（小于 4 小时）
         if (nowTime - createTime < this.minimumTime) {
             // 如果 4 小时里的收藏数量已经达到要求，则保留这个作品
@@ -26866,7 +26865,7 @@ class WorkPublishTime {
         const index = Math.floor(id / this.gap);
         // 如果传入的 id 匹配到最后一条记录，则将结束时间设置为现在
         if (index >= length - 1) {
-            return [data[length - 1][1], new Date().getTime()];
+            return [data[length - 1][1], Date.now()];
         }
         // 如果传入的 id 匹配到第一条记录，则直接返回数据
         if (index === 0) {
@@ -60428,7 +60427,7 @@ class Utils {
         const context = this;
         return function () {
             const args = arguments;
-            const now = new Date().getTime();
+            const now = Date.now();
             if (now - time >= delay) {
                 time = now;
                 return func.apply(context, args);

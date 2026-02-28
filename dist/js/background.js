@@ -1478,7 +1478,7 @@ class ManageFollowing {
             // 更新当前登录的用户的关注数据
             this.data[index].following = data.following;
             this.data[index].total = data.total;
-            this.data[index].time = new Date().getTime();
+            this.data[index].time = Date.now();
             // 历史关注数据采用追加模式，而非直接覆盖
             data.followedUsersInfo.forEach((newUserInfo) => {
                 const oldUserInfo = this.data[index].followedUsersInfo.find((userInfo) => userInfo.id === newUserInfo.id);
@@ -1500,7 +1500,7 @@ class ManageFollowing {
                 following: data.following,
                 followedUsersInfo: data.followedUsersInfo,
                 total: data.total,
-                time: new Date().getTime(),
+                time: Date.now(),
             });
         }
     }
@@ -1551,7 +1551,7 @@ class ManageFollowing {
         else {
             return;
         }
-        this.data[i].time = new Date().getTime();
+        this.data[i].time = Date.now();
     }
     async findAllPixivTab() {
         const tabs = await webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().tabs.query({
@@ -1580,7 +1580,7 @@ class ManageFollowing {
             const day30ms = 2592000000;
             for (let index = 0; index < this.data.length; index++) {
                 const item = this.data[index];
-                if (new Date().getTime() - item.time > day30ms) {
+                if (Date.now() - item.time > day30ms) {
                     this.data.splice(index, 1);
                     this.dispatchFollowingList();
                     this.storage();

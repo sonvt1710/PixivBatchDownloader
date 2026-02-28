@@ -228,7 +228,7 @@ class Resume {
     }
 
     log.warning(lang.transl('_正在保存抓取结果'))
-    this.taskId = new Date().getTime()
+    this.taskId = Date.now()
 
     this.part = []
 
@@ -350,7 +350,7 @@ class Resume {
     const expiryTime = 2592000000
 
     // 每隔一天检查一次数据是否过期
-    const nowTime = new Date().getTime()
+    const nowTime = Date.now()
     let lastCheckTime = 0
     const storeName = 'lastCheckExired'
     const data = localStorage.getItem(storeName)

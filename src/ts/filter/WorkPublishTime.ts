@@ -34,7 +34,7 @@ class WorkPublishTime {
 
     // 如果传入的 id 匹配到最后一条记录，则将结束时间设置为现在
     if (index >= length - 1) {
-      return [data[length - 1][1], new Date().getTime()]
+      return [data[length - 1][1], Date.now()]
     }
 
     // 如果传入的 id 匹配到第一条记录，则直接返回数据

@@ -287,7 +287,7 @@ class API {
   static getArtworkData(id: string, unlisted = false): Promise<ArtworkData> {
     const url = `https://www.pixiv.net/ajax/illust/${
       unlisted ? 'unlisted/' : ''
-    }${id}?time=${new Date().getTime()}`
+    }${id}?time=${Date.now()}`
     return this.fetch(url)
   }
 
@@ -302,7 +302,7 @@ class API {
   static getNovelData(id: string, unlisted = false): Promise<NovelData> {
     const url = `https://www.pixiv.net/ajax/novel/${
       unlisted ? 'unlisted/' : ''
-    }${id}?time=${new Date().getTime()}`
+    }${id}?time=${Date.now()}`
     return this.fetch(url)
   }
 

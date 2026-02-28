@@ -64,7 +64,7 @@ class FilterInactiveUsers {
     if (isNaN(number) || number <= 0) {
       return toast.error(lang.transl('_参数不合法本次操作已取消'))
     }
-    this.time = new Date().getTime() - number * 30 * 24 * 60 * 60 * 1000
+    this.time = Date.now() - number * 30 * 24 * 60 * 60 * 1000
     this.busy = true
 
     // 显示提示

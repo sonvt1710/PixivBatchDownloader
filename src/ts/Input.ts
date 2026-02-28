@@ -45,7 +45,7 @@ class Input {
   private init(option?: Option) {
     const _option = Object.assign(this.defultOption, option || {})
     this.value = _option.value!
-    this.id = `input` + new Date().getTime()
+    this.id = `input` + Date.now()
     this.create(_option)
   }
 
