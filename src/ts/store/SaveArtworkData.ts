@@ -149,6 +149,7 @@ class SaveArtworkData {
         const ugoiraInfo = {
           frames: meta.body.frames,
           mime_type: meta.body.mime_type,
+          originalThumbnail: body.urls.original,
         }
 
         let ext: string = 'zip'

@@ -46,6 +46,7 @@
         "lib/jepub.js",
         "lib/pako.min.js",
         "lib/UPNG.js",
+        "lib/ppd-webp.js",
         "lib/iconfont.js",
         "js/content.js"
       ],
@@ -93,6 +94,7 @@
     {
       "resources": [
         "lib/gif.worker.js",
+        "lib/ppd-webp.worker.js",
         "lib/listen_history_change.js",
         "lib/api_interceptor.js",
         "manifest.json",

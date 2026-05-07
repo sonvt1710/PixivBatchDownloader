@@ -18,6 +18,7 @@ class Config {
   /**下载器可以把动图保存为的所有格式，也是扩展名 */
   static readonly allUgoiraFormats = [
     'webm',
+    'webp',
     'gif',
     'apng',
     'zip',

@@ -360,11 +360,15 @@ class Download {
 
     // 用户可以同时选择多种动图的保存格式，需要全部处理
     const needConvertFormats: (typeof Config.allUgoiraFormats)[number][] = []
+    // 当用户同时选择了多种格式时，只有最后 push 的那个会保存下载记录，所以在这个作品的下载记录里，文件名的扩展名就是最后保存的格式
+    // 不过这么做没什么实际作用。我把默认格式 webp 放在最后，是考虑到在特定情况下可能会避免一次重复下载：
+    // 如果用户选择了多种格式下载过了一次，之后又改成了只使用 WebP 格式下载；并且去重策略是“严格”（判断文件名），那么可以避免重复下载
     if (settings.ugoiraSaveAsWebM) needConvertFormats.push('webm')
     if (settings.ugoiraSaveAsGIF) needConvertFormats.push('gif')
     if (settings.ugoiraSaveAsAPNG) needConvertFormats.push('apng')
     if (settings.ugoiraSaveAsZIP) needConvertFormats.push('zip')
     if (settings.ugoiraSaveAsUgoira) needConvertFormats.push('ugoira')
+    if (settings.ugoiraSaveAsWebP) needConvertFormats.push('webp')
 
     if (needConvertFormats.length === 0) {
       // 如果用户没有选择任何动图格式，则不进行转换
@@ -383,7 +387,7 @@ class Download {
       // 保存为 ZIP 或 Ugoria 格式时，在里面添加 animation.json 文件，保存动图的元信息
       if (format === 'zip' || format === 'ugoira') {
         // 对于播放动画来说，只有 frames 是必须的。其他数据是作品的元数据，不是必须的
-        const animationInfo = {
+        let animationInfo = {
           frames: result.ugoiraInfo.frames,
           mime_type: result.ugoiraInfo.mime_type,
           id: result.idNum,
@@ -397,6 +401,7 @@ class Download {
           userId: result.userId,
           regularSrc: result.regular,
           originalSrc: result.original,
+          thumbnail: result.ugoiraInfo.originalThumbnail || result.thumb,
         }
         // 把 animationInfo 写入 animation.json，并添加到 zip 文件里
         const zip = await new JSZip().loadAsync(zipFile)
@@ -409,7 +414,6 @@ class Download {
               ? 'application/octet-stream'
               : 'application/zip',
         })
-        console.log(file?.type)
       } else {
         // 处理其他格式：webm gif apng，需要进行转换
         try {
@@ -453,9 +457,14 @@ class Download {
         await Utils.sleep(200)
         setTimeout(() => {
           URL.revokeObjectURL(blobURL)
-        }, 10000)
+        }, 3000)
       } else {
-        // 如果这是最后一个待处理的格式，就返回这个 Blob 文件，让后续下载流程继续处理
+        // 如果这是最后一个待处理的格式
+
+        // 保存动图的缩略图
+        await this.downloadUgoiraThumbnail(result, newFileName)
+
+        // 返回这个 Blob 文件，让后续下载流程继续处理
         return file
       }
     }
@@ -579,6 +588,98 @@ class Download {
 
       await Utils.sleep(50)
     }
+  }
+
+  /** 处理“为动图保存一张缩略图”设置 */
+  private async downloadUgoiraThumbnail(
+    result: Result,
+    newFileName: string,
+    usePng = false,
+    retryCount = 0
+  ): Promise<void> {
+    if (!settings.saveThumbnailForUgoira || !result.ugoiraInfo) {
+      return
+    }
+
+    let thumbURL = result.ugoiraInfo.originalThumbnail
+    if (!thumbURL) {
+      // 下载器在之前版本里没有保存 originalThumbnail 字段，此时使用方形缩略图 URL 进行转换
+      // 但是存在一个问题：方形缩略图的扩展名都是 jpg，所以转换后的 URL 也都是 jpg 的
+      // 但 originalThumbnail 有可能是 png，此时使用 jpg 会导致转换后的 URL 错误，下载失败
+      thumbURL = Tools.squareThumbToOriginal(result.thumb)
+    }
+
+    // 如果该标记为 true，表示之前在请求 jpg 图片时 404 了，现在使用 png 格式再试一次
+    if (usePng) {
+      thumbURL = thumbURL.replace('.jpg', '.png')
+    }
+
+    // 为 thumbBlob 添加 try catch ，如果状态码是 404 就直接返回它
+    let thumbBlob: Blob | null = null
+    try {
+      const response = await fetch(thumbURL)
+      if (!response.ok) {
+        // 404 状态码有两种可能：
+        // 1. 该作品已不存在
+        // 2. 最大尺寸的缩略图是 png 格式，但从 thumb 里转换后的 URL 是 jpg 结尾，所以请求的 URL 不正确
+        if (response.status === 404 && usePng === false) {
+          // 对于第二种情况，重试一次。这不占用 retryCount 次数
+          if (thumbURL.endsWith('.jpg')) {
+            return this.downloadUgoiraThumbnail(
+              result,
+              newFileName,
+              true,
+              retryCount
+            )
+          }
+        } else {
+          // 如果是其他状态码，或者已经重试了因为 jpg 导致的 404 错误，则跳过这个缩略图，不再重试它
+          log.error(
+            lang.transl('_跳过这个缩略图') +
+              ': ' +
+              Utils.createLinkHTML(thumbURL) +
+              '<br>' +
+              lang.transl('_状态码') +
+              ': ' +
+              response.status.toString()
+          )
+          return
+        }
+      }
+      thumbBlob = await response.blob()
+    } catch (error) {
+      // 如果网络请求失败，重试最多 3 次
+      if (retryCount <= 3) {
+        return this.downloadUgoiraThumbnail(
+          result,
+          newFileName,
+          false,
+          retryCount + 1
+        )
+      } else {
+        // 如果重试达到最大次数，就不再重试，也不抛出错误，因为这只是下载缩略图失败了，不影响动图文件的下载
+        log.error(
+          lang.transl('_跳过这个缩略图') + ': ' + Utils.createLinkHTML(thumbURL)
+        )
+        return
+      }
+    }
+
+    // 下载缩略图
+    const thumbBlobURL = URL.createObjectURL(thumbBlob)
+    const thumbFileName = Utils.replaceExtension(newFileName, '.jpg')
+    await this.waitPreviousFileDownload()
+    this.sendDownload(
+      thumbBlob,
+      thumbBlobURL,
+      thumbFileName,
+      result.id,
+      -1,
+      false
+    )
+    setTimeout(() => {
+      URL.revokeObjectURL(thumbBlobURL)
+    }, 3000)
   }
 
   private async sendDownload(

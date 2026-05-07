@@ -12,10 +12,13 @@ export interface SettingsForm extends HTMLFormElement {
   downColorImg: HTMLInputElement
   downBlackWhiteImg: HTMLInputElement
   ugoiraSaveAsWebM: HTMLInputElement
+  ugoiraSaveAsWebP: HTMLInputElement
   ugoiraSaveAsGIF: HTMLInputElement
   ugoiraSaveAsAPNG: HTMLInputElement
   ugoiraSaveAsZIP: HTMLInputElement
   ugoiraSaveAsUgoira: HTMLInputElement
+  animatedWebPQuality: RadioNodeList
+  saveThumbnailForUgoira: HTMLInputElement
   BMKNumMin: HTMLInputElement
   BMKNumMax: HTMLInputElement
   BMKNumAverageSwitch: HTMLInputElement

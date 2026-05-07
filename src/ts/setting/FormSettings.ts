@@ -151,10 +151,12 @@ class FormSettings {
       'doNotCrawlFirstImagesSwitch',
       'useTagAliasForTagsNamingRule',
       'ugoiraSaveAsWebM',
+      'ugoiraSaveAsWebP',
       'ugoiraSaveAsGIF',
       'ugoiraSaveAsAPNG',
       'ugoiraSaveAsZIP',
       'ugoiraSaveAsUgoira',
+      'saveThumbnailForUgoira',
     ],
     text: [
       'onlyCrawlFirstFewImagesCount',
@@ -229,6 +231,7 @@ class FormSettings {
       'copyImageSize',
       'logVisibleDefault',
       'serialNoStart',
+      'animatedWebPQuality',
     ],
     textarea: [
       'notNeedTag',

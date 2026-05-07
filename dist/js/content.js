@@ -2761,6 +2761,7 @@ class Config {
     /**下载器可以把动图保存为的所有格式，也是扩展名 */
     static allUgoiraFormats = [
         'webm',
+        'webp',
         'gif',
         'apng',
         'zip',
@@ -2846,16 +2847,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _EVT__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../EVT */ "./src/ts/EVT.ts");
 /* harmony import */ var _setting_Settings__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../setting/Settings */ "./src/ts/setting/Settings.ts");
 /* harmony import */ var _ToWebM__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./ToWebM */ "./src/ts/ConvertUgoira/ToWebM.ts");
-/* harmony import */ var _ToGIF__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./ToGIF */ "./src/ts/ConvertUgoira/ToGIF.ts");
-/* harmony import */ var _ToAPNG__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./ToAPNG */ "./src/ts/ConvertUgoira/ToAPNG.ts");
-/* harmony import */ var _MsgBox__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../MsgBox */ "./src/ts/MsgBox.ts");
-/* harmony import */ var _Language__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../Language */ "./src/ts/Language.ts");
-/* harmony import */ var _Tools__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../Tools */ "./src/ts/Tools.ts");
-/* harmony import */ var _Log__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../Log */ "./src/ts/Log.ts");
-/* harmony import */ var _store_States__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../store/States */ "./src/ts/store/States.ts");
-/* harmony import */ var _utils_Utils__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../utils/Utils */ "./src/ts/utils/Utils.ts");
-
-
+/* harmony import */ var _ToWebP__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./ToWebP */ "./src/ts/ConvertUgoira/ToWebP.ts");
+/* harmony import */ var _ToGIF__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./ToGIF */ "./src/ts/ConvertUgoira/ToGIF.ts");
+/* harmony import */ var _ToAPNG__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./ToAPNG */ "./src/ts/ConvertUgoira/ToAPNG.ts");
+/* harmony import */ var _Tools__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../Tools */ "./src/ts/Tools.ts");
+/* harmony import */ var _store_States__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../store/States */ "./src/ts/store/States.ts");
+/* harmony import */ var _utils_Utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../utils/Utils */ "./src/ts/utils/Utils.ts");
 
 
 
@@ -2871,14 +2868,17 @@ class ConvertUgoira {
         this.setMaxCount();
         this.bindEvents();
     }
-    _count = 0; // 统计有几个转换任务
-    maxCount = 1; // 允许同时运行多少个转换任务
-    msgFlag = 'tipConvertUgoira';
+    /** 统计有多少个转换任务在同时执行 */
+    _count = 0;
+    /** 同时运行的转换任务的上限 */
+    maxCount = 1;
+    /** 缓存每个作品的 ImageBitmap 列表，key 为作品 id */
+    imageBitmapCache = new Map();
+    /** 当前正在转换中的作品 id 集合 */
+    convertingIds = new Set();
+    /** 保存清理缓存的定时器，key 为作品 id */
+    clearCacheTimers = new Map();
     bindEvents() {
-        window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_0__.EVT.list.downloadStart, () => {
-            _MsgBox__WEBPACK_IMPORTED_MODULE_5__.msgBox.resetOnce(this.msgFlag);
-        });
-        // 设置发生变化时
         window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_0__.EVT.list.settingChange, (ev) => {
             const data = ev.detail.data;
             if (data.name === 'convertUgoiraThread') {
@@ -2888,10 +2888,6 @@ class ConvertUgoira {
         window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_0__.EVT.list.convertSuccess, () => {
             this.complete();
         });
-        // 如果转换动图时页面被隐藏了，则显示提示
-        // document.addEventListener('visibilitychange', () => {
-        //   this.checkHidden()
-        // })
     }
     setMaxCount() {
         this.maxCount =
@@ -2900,31 +2896,44 @@ class ConvertUgoira {
     set count(num) {
         this._count = num;
         _EVT__WEBPACK_IMPORTED_MODULE_0__.EVT.fire('convertChange', this._count);
-        // this.checkHidden()
     }
-    async start(file, info, type) {
+    /** 生成或从缓存中获取 ImageBitmap 列表 */
+    async getImageBitmapList(file, id) {
+        if (this.imageBitmapCache.has(id)) {
+            return this.imageBitmapCache.get(id);
+        }
+        const zipFileBuffer = await file.arrayBuffer();
+        const indexList = _Tools__WEBPACK_IMPORTED_MODULE_6__.Tools.getJPGContentIndex(zipFileBuffer);
+        const imageBitmapList = await _Tools__WEBPACK_IMPORTED_MODULE_6__.Tools.extractImage(zipFileBuffer, indexList, 'ImageBitmap');
+        this.imageBitmapCache.set(id, imageBitmapList);
+        return imageBitmapList;
+    }
+    async start(file, info, type, id) {
         while (true) {
-            await _utils_Utils__WEBPACK_IMPORTED_MODULE_10__.Utils.sleep(200);
+            await _utils_Utils__WEBPACK_IMPORTED_MODULE_8__.Utils.sleep(200);
             // 如果已经停止下载，就不添加这个任务，避免浪费资源
             // 此时不用返回真正的 Blob 对象，因为停止下载时，Download 里也不会执行后续操作了
-            if (!_store_States__WEBPACK_IMPORTED_MODULE_9__.states.downloading) {
+            if (!_store_States__WEBPACK_IMPORTED_MODULE_7__.states.downloading) {
                 return '';
             }
             if (this._count < this.maxCount) {
                 this.count = this._count + 1;
-                // 提取每一张图片
-                const zipFileBuffer = await file.arrayBuffer();
-                const indexList = _Tools__WEBPACK_IMPORTED_MODULE_7__.Tools.getJPGContentIndex(zipFileBuffer);
-                const ImageBitmapList = await _Tools__WEBPACK_IMPORTED_MODULE_7__.Tools.extractImage(zipFileBuffer, indexList, 'ImageBitmap');
+                // 把这个 id 添加到转换中的 id 列表里，并取消清理它的缓存的定时器
+                this.convertingIds.add(id);
+                window.clearTimeout(this.clearCacheTimers.get(id));
+                const imageBitmapList = await this.getImageBitmapList(file, id);
                 if (type === 'gif') {
-                    return _ToGIF__WEBPACK_IMPORTED_MODULE_3__.toGIF.convert(ImageBitmapList, info, file.size);
+                    return _ToGIF__WEBPACK_IMPORTED_MODULE_4__.toGIF.convert(imageBitmapList, info, file.size);
                 }
                 else if (type === 'png') {
-                    return _ToAPNG__WEBPACK_IMPORTED_MODULE_4__.toAPNG.convert(ImageBitmapList, info);
+                    return _ToAPNG__WEBPACK_IMPORTED_MODULE_5__.toAPNG.convert(imageBitmapList, info);
+                }
+                else if (type === 'webp') {
+                    return _ToWebP__WEBPACK_IMPORTED_MODULE_3__.toWebP.convert(imageBitmapList, info);
                 }
                 else {
                     // 默认使用 webm 格式
-                    return _ToWebM__WEBPACK_IMPORTED_MODULE_2__.toWebM.convert(ImageBitmapList, info);
+                    return _ToWebM__WEBPACK_IMPORTED_MODULE_2__.toWebM.convert(imageBitmapList, info);
                 }
             }
         }
@@ -2934,27 +2943,64 @@ class ConvertUgoira {
     }
     // 转换成 WebM
     async webm(file, info, id) {
-        const delayTooLarge = info.frames.find((item) => item.delay > 32767);
-        if (delayTooLarge) {
-            const msg = _Language__WEBPACK_IMPORTED_MODULE_6__.lang.transl('_动图不能转换为WEBM视频的提示', _Tools__WEBPACK_IMPORTED_MODULE_7__.Tools.createWorkLink(id, '', 'artwork'));
-            _MsgBox__WEBPACK_IMPORTED_MODULE_5__.msgBox.warning(msg);
-            _Log__WEBPACK_IMPORTED_MODULE_8__.log.warning(msg);
-            return await this.start(file, info, 'gif');
-        }
-        return await this.start(file, info, 'webm');
+        // WebM 视频的帧延迟不能大于 32767 ms，否则就无法转换成功
+        // 其他格式没有这个问题
+        info.frames.forEach((frame) => {
+            if (frame.delay > 32767) {
+                // 直接修改原始数据
+                frame.delay = 32767;
+            }
+        });
+        // 另一个已知问题：
+        // 如果图片高度是奇数，那么视频在播放时可能会在边缘出现一条绿线（视播放器和解码器的情况而定，也可能不会出现绿线）。这是 VP9 编码器的处理方式导致的（对奇数尺寸向下取整），不是下载器的问题，目前我也不打算处理。
+        // 例如 https://www.pixiv.net/artworks/144266793 的图片高度为 281 px，就会有这个问题。
+        // 原因：
+        // 如果图片的宽度或高度是奇数（尤其是高度），VP9/WebM 编码时容易在边缘（通常是底部）出现一条绿线。
+        // 这是因为 YUV 4:2:0 格式和 VP9 超级块对齐的要求导致的：
+        // 1. 编码器在内部会对奇数尺寸进行对齐处理（最常见的是向下取偶数，如 281 → 280）。
+        // 2. 容器中记录的分辨率可能是 281px，但实际编码的图像内容只有 280px。
+        // 3. 最后一行（或填充区域）没有有效像素数据，在解码/渲染时就表现为绿色条。
+        // 这不是 bug，而是视频编码的常见兼容性问题（H.264/H.265 也有类似要求）。
+        // 播放器渲染链路（尤其是某些内置解码器 + Renderer）处理 padding 不够完美时，就会露出绿线。
+        const blob = await this.start(file, info, 'webm', id);
+        this.clearCache(id);
+        return blob;
+    }
+    // 转换成 WebP
+    async webp(file, info, id) {
+        const blob = await this.start(file, info, 'webp', id);
+        this.clearCache(id);
+        return blob;
     }
     // 转换成 GIF
     async gif(file, info, id) {
-        return await this.start(file, info, 'gif');
+        const blob = await this.start(file, info, 'gif', id);
+        this.clearCache(id);
+        return blob;
     }
     // 转换成 APNG
     async apng(file, info, id) {
-        return await this.start(file, info, 'png');
+        const blob = await this.start(file, info, 'png', id);
+        this.clearCache(id);
+        return blob;
     }
-    checkHidden() {
-        if (this._count > 0 && document.visibilityState === 'hidden') {
-            _MsgBox__WEBPACK_IMPORTED_MODULE_5__.msgBox.once(this.msgFlag, _Language__WEBPACK_IMPORTED_MODULE_6__.lang.transl('_转换动图时页面被隐藏的提示'), 'warning');
-        }
+    /** 从转换中列表移除 id，并在一定时间后清理不再使用的 ImageBitmap 缓存 */
+    clearCache(id) {
+        this.convertingIds.delete(id);
+        // 延迟一定时间，检查不再使用的 id，并清除其缓存。
+        // 因为一个 id 可能需要执行多次转换格式的操作，所以在一次转换任务完成后，可能接下来还要使用缓存。因此不能立刻清除缓存，而是需要等一段时间，等可能的后续转换任务也完成了之后再清除缓存。
+        window.clearTimeout(this.clearCacheTimers.get(id));
+        this.clearCacheTimers.set(id, window.setTimeout(() => {
+            if (!this.convertingIds.has(id)) {
+                // console.log(`clear ${id}`)
+                const bitmaps = this.imageBitmapCache.get(id);
+                if (bitmaps) {
+                    bitmaps.forEach((bitmap) => bitmap.close());
+                }
+                this.imageBitmapCache.delete(id);
+                this.clearCacheTimers.delete(id);
+            }
+        }, 10000));
     }
 }
 const convertUgoira = new ConvertUgoira();
@@ -3157,6 +3203,51 @@ class ToWebM {
     }
 }
 const toWebM = new ToWebM();
+
+
+
+/***/ }),
+
+/***/ "./src/ts/ConvertUgoira/ToWebP.ts":
+/*!****************************************!*\
+  !*** ./src/ts/ConvertUgoira/ToWebP.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   toWebP: () => (/* binding */ toWebP)
+/* harmony export */ });
+/* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! webextension-polyfill */ "./node_modules/webextension-polyfill/dist/browser-polyfill.js");
+/* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _EVT__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../EVT */ "./src/ts/EVT.ts");
+/* harmony import */ var _setting_Settings__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../setting/Settings */ "./src/ts/setting/Settings.ts");
+
+
+
+class ToWebP {
+    constructor() {
+        this.loadWorker();
+    }
+    async loadWorker() {
+        const res = await fetch(webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().runtime.getURL('lib/ppd-webp.worker.js'));
+        const blob = await res.blob();
+        const workerUrl = URL.createObjectURL(blob);
+        PPDWebP.init(workerUrl);
+    }
+    async convert(ImageBitmapList, info) {
+        const delays = info.frames.map((frame) => frame.delay);
+        const blob = await PPDWebP.encode(ImageBitmapList, delays, {
+            // 在有损压缩时使用 94 质量。这是比较高的质量了，不过体积依然比无损的 100 小很多
+            quality: _setting_Settings__WEBPACK_IMPORTED_MODULE_2__.settings.animatedWebPQuality === 'lossy' ? 0.94 : 1,
+            loopCount: 0, // loop forever
+        });
+        _EVT__WEBPACK_IMPORTED_MODULE_1__.EVT.fire('convertSuccess');
+        return blob;
+    }
+}
+const toWebP = new ToWebP();
 
 
 
@@ -12282,9 +12373,7 @@ class Tools {
         }
     }
     static async extractImage(zipFile, indexList, target) {
-        const result = [];
-        let i = 0;
-        for (const index of indexList) {
+        const promises = indexList.map((index, i) => {
             // 起始位置
             const start = index;
             // 截止下一个文件名之前
@@ -12301,17 +12390,14 @@ class Tools {
                 type: 'image/jpeg',
             });
             if (target === 'ImageBitmap') {
-                const map = await createImageBitmap(blob);
-                result.push(map);
+                return createImageBitmap(blob);
             }
-            else if (target === 'img') {
+            else {
                 const url = URL.createObjectURL(blob);
-                const img = await _utils_Utils__WEBPACK_IMPORTED_MODULE_4__.Utils.loadImg(url);
-                result.push(img);
+                return _utils_Utils__WEBPACK_IMPORTED_MODULE_4__.Utils.loadImg(url);
             }
-            ++i;
-        }
-        return result;
+        });
+        return Promise.all(promises);
     }
     /**根据 illustType，返回作品类型的描述字符串 */
     // 主要用于储存进 idList
@@ -12562,6 +12648,16 @@ class Tools {
             rows = 6;
         }
         el.setAttribute('rows', rows.toString());
+    }
+    /** 把动图的方形缩略图 URL 转换为最大尺寸的缩略图 URL */
+    // 输入：
+    // https://i.pximg.net/c/250x250_80_a2/img-master/img/2026/05/07/13/11/47/144478544_square1200.jpg
+    // 输出：
+    // https://i.pximg.net/img-original/img/2026/05/07/13/11/47/144478544_ugoira0.jpg
+    static squareThumbToOriginal(thumbUrl) {
+        return thumbUrl
+            .replace(/\/c\/\d+x\d+_\d+_\w+\/img-master\//, '/img-original/')
+            .replace(/_square1200\.jpg$/, '_ugoira0.jpg');
     }
 }
 
@@ -21656,6 +21752,9 @@ class Download {
         }
         // 用户可以同时选择多种动图的保存格式，需要全部处理
         const needConvertFormats = [];
+        // 当用户同时选择了多种格式时，只有最后 push 的那个会保存下载记录，所以在这个作品的下载记录里，文件名的扩展名就是最后保存的格式
+        // 不过这么做没什么实际作用。我把默认格式 webp 放在最后，是考虑到在特定情况下可能会避免一次重复下载：
+        // 如果用户选择了多种格式下载过了一次，之后又改成了只使用 WebP 格式下载；并且去重策略是“严格”（判断文件名），那么可以避免重复下载
         if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsWebM)
             needConvertFormats.push('webm');
         if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsGIF)
@@ -21666,6 +21765,8 @@ class Download {
             needConvertFormats.push('zip');
         if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsUgoira)
             needConvertFormats.push('ugoira');
+        if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsWebP)
+            needConvertFormats.push('webp');
         if (needConvertFormats.length === 0) {
             // 如果用户没有选择任何动图格式，则不进行转换
             // 注意：此时下载器依然会保存原始 zip 文件，而不是跳过这个文件
@@ -21674,13 +21775,14 @@ class Download {
         while (needConvertFormats.length > 0) {
             let file = null;
             const format = needConvertFormats.shift();
-            const _fileName = _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.replaceExtension(fileName, '.' + format);
-            this.lastUgoiraFileName = _fileName;
+            const newFileName = _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.replaceExtension(fileName, '.' + format);
+            this.lastUgoiraFileName = newFileName;
+            // 显示新的文件名。此时转换尚未开始，所以体积使用 zip 文件的体积
             this.setProgressBar(this.lastUgoiraFileName, zipFile.size, zipFile.size);
             // 保存为 ZIP 或 Ugoria 格式时，在里面添加 animation.json 文件，保存动图的元信息
             if (format === 'zip' || format === 'ugoira') {
                 // 对于播放动画来说，只有 frames 是必须的。其他数据是作品的元数据，不是必须的
-                const animationInfo = {
+                let animationInfo = {
                     frames: result.ugoiraInfo.frames,
                     mime_type: result.ugoiraInfo.mime_type,
                     id: result.idNum,
@@ -21694,6 +21796,7 @@ class Download {
                     userId: result.userId,
                     regularSrc: result.regular,
                     originalSrc: result.original,
+                    thumbnail: result.ugoiraInfo.originalThumbnail || result.thumb
                 };
                 // 把 animationInfo 写入 animation.json，并添加到 zip 文件里
                 const zip = await new JSZip().loadAsync(zipFile);
@@ -21705,7 +21808,6 @@ class Download {
                         ? 'application/octet-stream'
                         : 'application/zip',
                 });
-                console.log(file?.type);
             }
             else {
                 // 处理其他格式：webm gif apng，需要进行转换
@@ -21728,20 +21830,24 @@ class Download {
             }
             // 如果这不是最后一个待处理的格式，就直接在这里下载
             if (needConvertFormats.length > 0) {
+                // 显示转换后的文件的体积
                 this.setProgressBar(this.lastUgoiraFileName, file.size, file.size);
                 // 等待上一个文件下载完成
                 await this.waitPreviousFileDownload();
                 // 发送下载任务
                 const blobURL = URL.createObjectURL(file);
                 // 此时不会返回下载成功或失败的消息，所以这个抓取结果会保持下载中的状态
-                this.sendDownload(file, blobURL, _fileName, result.id, -1, false);
+                this.sendDownload(file, blobURL, newFileName, result.id, -1, false);
                 await _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.sleep(200);
                 setTimeout(() => {
                     URL.revokeObjectURL(blobURL);
-                }, 10000);
+                }, 3000);
             }
             else {
-                // 如果这是最后一个待处理的格式，就返回这个 Blob 文件，让后续下载流程继续处理
+                // 如果这是最后一个待处理的格式
+                // 保存动图的缩略图
+                await this.downloadUgoiraThumbnail(result, newFileName);
+                // 返回这个 Blob 文件，让后续下载流程继续处理
                 return file;
             }
         }
@@ -21839,6 +21945,70 @@ class Download {
             }
             await _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.sleep(50);
         }
+    }
+    /** 处理“为动图保存一张缩略图”设置 */
+    async downloadUgoiraThumbnail(result, newFileName, usePng = false, retryCount = 0) {
+        if (!_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.saveThumbnailForUgoira || !result.ugoiraInfo) {
+            return;
+        }
+        let thumbURL = result.ugoiraInfo.originalThumbnail;
+        if (!thumbURL) {
+            // 下载器在之前版本里没有保存 originalThumbnail 字段，此时使用方形缩略图 URL 进行转换
+            // 但是存在一个问题：方形缩略图的扩展名都是 jpg，所以转换后的 URL 也都是 jpg 的
+            // 但 originalThumbnail 有可能是 png，此时使用 jpg 会导致转换后的 URL 错误，下载失败
+            thumbURL = _Tools__WEBPACK_IMPORTED_MODULE_15__.Tools.squareThumbToOriginal(result.thumb);
+        }
+        // 如果该标记为 true，表示之前在请求 jpg 图片时 404 了，现在使用 png 格式再试一次
+        if (usePng) {
+            thumbURL = thumbURL.replace('.jpg', '.png');
+        }
+        // 为 thumbBlob 添加 try catch ，如果状态码是 404 就直接返回它
+        let thumbBlob = null;
+        try {
+            const response = await fetch(thumbURL);
+            if (!response.ok) {
+                // 404 状态码有两种可能：
+                // 1. 该作品已不存在
+                // 2. 最大尺寸的缩略图是 png 格式，但从 thumb 里转换后的 URL 是 jpg 结尾，所以请求的 URL 不正确
+                if (response.status === 404 && usePng === false) {
+                    // 对于第二种情况，重试一次。这不占用 retryCount 次数
+                    if (thumbURL.endsWith('.jpg')) {
+                        return this.downloadUgoiraThumbnail(result, newFileName, true, retryCount);
+                    }
+                }
+                else {
+                    // 如果是其他状态码，或者已经重试了因为 jpg 导致的 404 错误，则跳过这个缩略图，不再重试它
+                    _Log__WEBPACK_IMPORTED_MODULE_2__.log.error(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_跳过这个缩略图') +
+                        ': ' +
+                        _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.createLinkHTML(thumbURL) +
+                        '<br>' +
+                        _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_状态码') +
+                        ': ' +
+                        response.status.toString());
+                    return;
+                }
+            }
+            thumbBlob = await response.blob();
+        }
+        catch (error) {
+            // 如果网络请求失败，重试最多 3 次
+            if (retryCount <= 3) {
+                return this.downloadUgoiraThumbnail(result, newFileName, false, retryCount + 1);
+            }
+            else {
+                // 如果重试达到最大次数，就不再重试，也不抛出错误，因为这只是下载缩略图失败了，不影响动图文件的下载
+                _Log__WEBPACK_IMPORTED_MODULE_2__.log.error(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_跳过这个缩略图') + ': ' + _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.createLinkHTML(thumbURL));
+                return;
+            }
+        }
+        // 下载缩略图
+        const thumbBlobURL = URL.createObjectURL(thumbBlob);
+        const thumbFileName = _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.replaceExtension(newFileName, '.jpg');
+        await this.waitPreviousFileDownload();
+        this.sendDownload(thumbBlob, thumbBlobURL, thumbFileName, result.id, -1, false);
+        setTimeout(() => {
+            URL.revokeObjectURL(thumbBlobURL);
+        }, 3000);
     }
     async sendDownload(blob, blobURL, fileName, id, taskBatch, reply = true) {
         // 如果任务已停止，就不再下载这个文件
@@ -22077,6 +22247,7 @@ class DownloadControl {
                 // 发送下载成功的事件
                 _EVT__WEBPACK_IMPORTED_MODULE_1__.EVT.fire('downloadSuccess', msg.data);
                 this.downloadOrSkipAFile(msg.data);
+                // console.log('downloaded', msg.data.id )
             }
             else if (msg.msg === 'download_err') {
                 // 浏览器把文件保存到本地失败
@@ -22879,7 +23050,7 @@ class DownloadNovelEmbeddedImage {
         _Log__WEBPACK_IMPORTED_MODULE_3__.log.log(_Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_正在下载小说x中的插画x', _Tools__WEBPACK_IMPORTED_MODULE_7__.Tools.createWorkLink(id, title, 'novel'), `${current} / ${total}`), 'downloadNovelImage' + id);
     }
     /**最多重试一定次数，避免无限重试 */
-    retryMax = 5;
+    retryMax = 10;
     async getImage(url, type, retry = 0) {
         try {
             const res = await fetch(url);
@@ -22890,7 +23061,7 @@ class DownloadNovelEmbeddedImage {
             return data;
         }
         catch (error) {
-            // 有时遇到错误时，请求并没有关闭（例如服务器错误的返回 206 状态码），要等到浏览器认为请求超时才会报错。可能需要等待 5 分钟
+            // 发生网络错误时，有时候请求会立即结束并被捕获。但有时需要等比较长的时间，例如服务器错误的返回了 206 状态码，请求并不会立刻结束，而是要等到浏览器认为请求超时才会报错。可能需要等待 5 分钟
             retry++;
             // console.log(retry, url)
             if (retry > this.retryMax) {
@@ -29421,36 +29592,162 @@ And so on.
         'Сохранить <span class="key">Ugoira</span> как',
     ],
     _动图保存格式的说明: [
-        `Pixiv 的动图的源文件是一个 Zip 压缩文件，里面包含了多张静态图片。下载器可以把它转换成其他格式。<br>
-WebM 视频的体积最小，而且画质损失不明显。它是预设的选择。<br>
-GIF 图片的兼容性最好，但是体积比较大，而且画质也比较差，不推荐。<br>
-APNG 图片是无损压缩，画质最好，但体积通常是最大的。<br>
-Zip 文件是源文件。`,
-        `Pixiv 的動圖的原始檔是一個 Zip 壓縮檔案，裡面包含了多張靜態圖片。下載器可以把它轉換成其他格式。<br>
-WebM 影片的體積最小，而且畫質損失不明顯。它是預設的選擇。<br>
-GIF 圖片的相容性最好，但是體積比較大，而且畫質也比較差，不推薦。<br>
-APNG 圖片是無失真壓縮，畫質最好，但體積通常是最大的。<br>
-Zip 檔案是原始檔。`,
-        `The source file of Pixiv's animated image is a Zip compressed file containing multiple static images. The downloader can convert it to other formats. <br>
-WebM video has the smallest size and the image quality loss is not obvious. It is the default choice. <br>
-GIF images have the best compatibility, but they are larger in size and the image quality is also poor, so they are not recommended. <br>
-APNG images are lossless compression, with the best image quality, but usually the largest in size. <br>
-The Zip file is the source file.`,
-        `Pixivのアニメーション画像のソースファイルは、複数の静止画を含むZip圧縮ファイルです。ダウンローダーで他の形式に変換できます。<br>
-WebM動画はファイルサイズが最も小さく、画質の劣化も目立ちません。デフォルトの選択肢です。<br>
-GIF画像は互換性が最も優れていますが、ファイルサイズが大きく、画質も劣るため、あまりお勧めできません。<br>
-APNG画像はロスレス圧縮で、画質は最も優れていますが、ファイルサイズが最も大きくなります。<br>
-Zipファイルがソースファイルです。`,
-        `Pixiv 애니메이션 이미지의 원본 파일은 여러 개의 정적 이미지가 포함된 Zip 압축 파일입니다. 다운로더는 이를 다른 형식으로 변환할 수 있습니다. <br>
-WebM 비디오는 크기가 가장 작고 화질 저하가 눈에 띄지 않습니다. 기본 선택 사항입니다. <br>
-GIF 이미지는 호환성이 가장 뛰어나지만, 크기가 크고 화질이 좋지 않아 권장하지 않습니다. <br>
-APNG 이미지는 무손실 압축으로 화질이 가장 좋지만 일반적으로 크기가 가장 큽니다. <br>
-Zip 파일이 원본 파일입니다.`,
-        `Исходный файл анимированного изображения Pixiv — это сжатый файл Zip, содержащий несколько статических изображений. Загрузчик может конвертировать его в другие форматы. <br>
-Видео WebM имеет наименьший размер, и потеря качества изображения неочевидна. Это выбор по умолчанию. <br>
-Изображения GIF имеют лучшую совместимость, но они больше по размеру, а качество изображения также плохое, поэтому они не рекомендуются. <br>
-Изображения APNG — это сжатие без потерь, с наилучшим качеством изображения, но обычно самые большие по размеру. <br>
-Файл Zip является исходным файлом.`,
+        `下载器可以把动图保存为多种格式，并且你可以根据需要同时选择多种格式。<br>
+<br>
+格式列表：<br>
+- WebP 图片：可以选择有损或无损压缩。相比其他图像格式，在画质相同时的体积最小，推荐使用。<br>
+- WebM 视频：有损压缩。它是视频文件，需要使用视频播放器打开。<br>
+- GIF 图片：有损压缩。优点是兼容性好，缺点是画质最差，体积也比较大，不推荐。<br>
+- APNG 图片：无损压缩。缺点是体积最大，而且转换耗时也最长。<br>
+- ZIP 文件：无损。它是动图的源文件，包含多张静态图片，并且下载器会在里面添加一个 JSON 文件保存动画的元数据。<br>
+- Ugoira 文件：无损。它其实就是 ZIP 文件，只是扩展名为 .ugoira。在 Windows 系统里，你可以安装 BandiView 来播放 .ugoira 文件，但是其他系统可能没有类似的软件。 <br>
+<br>
+子选项：<br>
+- WebP 图像质量：你可以设置 WebP 图片的质量，默认是高质量的有损压缩。你也可以改为无损压缩。<br>
+- 为动图保存一张缩略图：下载动图时，保存一张它的静态缩略图文件。<br>
+<br>
+推荐的格式：<br>
+我推荐优先使用 WebP 图片，因为它在相同画质时的体积最小。缺点是一些比较旧的看图软件可能不支持查看 WebP 动图。<br>
+另外，对于 Windows 用户我也很推荐使用 Ugoira 文件。你可以安装 BandiView 来播放 .ugoira 文件（免费版即可），此时 Ugoira 文件有很多优点：原始文件，无损，有动画效果，无须转换，体积也小。<br>
+<br>
+每种格式的体积：<br>
+我下载了近期的 1000 个动图作品进行测试，下面是每种格式的平均体积，仅供参考：<br>
+- ZIP/Ugoira：9MB<br>
+- WebP：7 MB（有损压缩）或 35 MB（无损压缩）<br>
+- WebM：10 MB<br>
+- GIF：20 MB<br>
+- APNG：48 MB<br>
+从小到大排序：WebP（有损）< ZIP/Ugoira < WebM < GIF < WebP（无损）< APNG。<br>`,
+        `下載器可以把動圖儲存為多種格式，而且你可以依照需要同時選擇多種格式。<br>
+<br>
+格式列表：<br>
+- WebP 圖片：可以選擇有損或無損壓縮。和其他圖像格式相比，在畫質相同時，它的體積最小，推薦使用。<br>
+- WebM 影片：有損壓縮。它是影片檔案，需要使用影片播放器開啟。<br>
+- GIF 圖片：有損壓縮。優點是相容性好，缺點是畫質最差，體積也比較大，不推薦。<br>
+- APNG 圖片：無損壓縮。缺點是體積最大，而且轉換耗時也最久。<br>
+- ZIP 檔案：無損。它是動圖的原始檔案，包含多張靜態圖片，而且下載器會在裡面加入一個 JSON 檔案來保存動畫的中繼資料。<br>
+- Ugoira 檔案：無損。它其實就是 ZIP 檔案，只是副檔名為 .ugoira。在 Windows 系統裡，你可以安裝 BandiView 來播放 .ugoira 檔案，但其他系統可能沒有類似的軟體。 <br>
+<br>
+子選項：<br>
+- WebP 圖像品質：你可以設定 WebP 圖片的品質，預設是高品質的有損壓縮。你也可以改成無損壓縮。<br>
+- 為動圖儲存一張縮圖：下載動圖時，儲存一張它的靜態縮圖檔案。<br>
+<br>
+推薦的格式：<br>
+我推薦優先使用 WebP 圖片，因為它在相同畫質時的體積最小。缺點是一些比較舊的看圖軟體可能不支援查看 WebP 動圖。<br>
+另外，對於 Windows 使用者，我也很推薦使用 Ugoira 檔案。你可以安裝 BandiView 來播放 .ugoira 檔案（免費版即可），這樣一來 Ugoira 檔案有很多優點：原始檔案、無損、有動畫效果、不需要轉換，而且體積也小。<br>
+<br>
+每種格式的體積：<br>
+我下載了近期的 1000 個動圖作品進行測試，下面是每種格式的平均體積，僅供參考：<br>
+- ZIP/Ugoira：9MB<br>
+- WebP：7 MB（有損壓縮）或 35 MB（無損壓縮）<br>
+- WebM：10 MB<br>
+- GIF：20 MB<br>
+- APNG：48 MB<br>
+從小到大排序：WebP（有損）< ZIP/Ugoira < WebM < GIF < WebP（無損）< APNG。<br>`,
+        `The downloader can save Ugoira in multiple formats, and you can select multiple formats at the same time if needed.<br>
+<br>
+Format list:<br>
+- WebP image: You can choose either lossy or lossless compression. Compared with other image formats, it has the smallest file size at the same image quality, so it is recommended.<br>
+- WebM video: Lossy compression. This is a video file, so you need a video player to open it.<br>
+- GIF image: Lossy compression. Its advantage is good compatibility, but the drawbacks are the worst image quality and a relatively large file size, so it is not recommended.<br>
+- APNG image: Lossless compression. The drawback is that it has the largest file size and also takes the longest time to convert.<br>
+- ZIP file: Lossless. This is the source file of the Ugoira. It contains multiple static images, and the downloader adds a JSON file inside it to save the animation metadata.<br>
+- Ugoira file: Lossless. It is actually just a ZIP file with the .ugoira extension. On Windows, you can install BandiView to play .ugoira files, but other systems may not have similar software. <br>
+<br>
+Sub-options:<br>
+- WebP image quality: You can set the quality of WebP images. The default is high-quality lossy compression. You can also change it to lossless compression.<br>
+- Save a thumbnail for Ugoira: When downloading Ugoira, save one static thumbnail file for it.<br>
+<br>
+Recommended formats:<br>
+I recommend using WebP images first, because they have the smallest file size at the same image quality. The drawback is that some older image viewers may not support animated WebP images.<br>
+Also, I highly recommend Ugoira files for Windows users. You can install BandiView to play .ugoira files, and the free version is enough. In that case, Ugoira files have many advantages: original file, lossless, animated, no conversion needed, and small file size.<br>
+<br>
+File size of each format:<br>
+I downloaded and tested 1,000 recent Ugoira works. Below is the average file size of each format, for reference only:<br>
+- ZIP/Ugoira: 9 MB<br>
+- WebP: 7 MB (lossy) or 35 MB (lossless)<br>
+- WebM: 10 MB<br>
+- GIF: 20 MB<br>
+- APNG: 48 MB<br>
+Sorted from smallest to largest: WebP (lossy) < ZIP/Ugoira < WebM < GIF < WebP (lossless) < APNG.<br>`,
+        `ダウンローダーでは、Ugoira を複数の形式で保存できます。必要に応じて、複数の形式を同時に選ぶこともできます。<br>
+<br>
+形式一覧：<br>
+- WebP 画像：非可逆圧縮と可逆圧縮を選べます。他の画像形式と比べて、同じ画質ならファイルサイズが最も小さいので、おすすめです。<br>
+- WebM 動画：非可逆圧縮です。動画ファイルなので、動画プレイヤーで開く必要があります。<br>
+- GIF 画像：非可逆圧縮です。互換性が高いのは利点ですが、画質が最も悪く、ファイルサイズも比較的大きいため、おすすめしません。<br>
+- APNG 画像：可逆圧縮です。欠点は、ファイルサイズが最も大きく、変換にかかる時間も最も長いことです。<br>
+- ZIP ファイル：可逆です。これは Ugoira の元ファイルで、複数の静止画像が含まれています。さらに、ダウンローダーがその中にアニメーションのメタデータを保存するための JSON ファイルを追加します。<br>
+- Ugoira ファイル：可逆です。実際には拡張子が .ugoira になった ZIP ファイルです。Windows では、BandiView をインストールすると .ugoira ファイルを再生できますが、他の OS では同様のソフトがないかもしれません。 <br>
+<br>
+サブオプション：<br>
+- WebP 画像品質：WebP 画像の品質を設定できます。デフォルトは高品質の非可逆圧縮です。可逆圧縮に変更することもできます。<br>
+- Ugoira 用にサムネイルを1枚保存する：Ugoira をダウンロードするときに、静止サムネイルファイルを1枚保存します。<br>
+<br>
+おすすめの形式：<br>
+まずは WebP 画像を使うのがおすすめです。同じ画質ならファイルサイズが最も小さいからです。欠点は、少し古い画像ビューアでは WebP アニメーションを表示できない場合があることです。<br>
+また、Windows ユーザーには Ugoira ファイルもとてもおすすめです。.ugoira ファイルを再生するために BandiView をインストールできます。無料版で十分です。この場合、Ugoira ファイルには多くの利点があります。元ファイル、可逆、アニメーションあり、変換不要、しかもサイズも小さいです。<br>
+<br>
+各形式のファイルサイズ：<br>
+最近の Ugoira 作品を 1000 件ダウンロードしてテストしました。以下は各形式の平均ファイルサイズです。参考用です。<br>
+- ZIP/Ugoira：9MB<br>
+- WebP：7 MB（非可逆圧縮）または 35 MB（可逆圧縮）<br>
+- WebM：10 MB<br>
+- GIF：20 MB<br>
+- APNG：48 MB<br>
+小さい順に並べると、WebP（非可逆）< ZIP/Ugoira < WebM < GIF < WebP（可逆）< APNG です。<br>`,
+        `다운로더는 Ugoira를 여러 형식으로 저장할 수 있고, 필요에 따라 여러 형식을 동시에 선택할 수도 있습니다.<br>
+<br>
+형식 목록:<br>
+- WebP 이미지: 손실 압축과 무손실 압축 중에서 선택할 수 있습니다. 다른 이미지 형식과 비교했을 때, 같은 화질이라면 파일 크기가 가장 작아서 추천합니다.<br>
+- WebM 비디오: 손실 압축입니다. 비디오 파일이므로 비디오 플레이어로 열어야 합니다.<br>
+- GIF 이미지: 손실 압축입니다. 장점은 호환성이 좋다는 점이지만, 단점은 화질이 가장 나쁘고 파일 크기도 비교적 커서 추천하지 않습니다.<br>
+- APNG 이미지: 무손실 압축입니다. 단점은 파일 크기가 가장 크고 변환 시간도 가장 오래 걸린다는 점입니다.<br>
+- ZIP 파일: 무손실입니다. 이것은 Ugoira의 원본 파일이며, 여러 장의 정적 이미지가 들어 있습니다. 또 다운로더가 그 안에 애니메이션 메타데이터를 저장하는 JSON 파일도 추가합니다.<br>
+- Ugoira 파일: 무손실입니다. 사실상 확장자만 .ugoira인 ZIP 파일입니다. Windows에서는 BandiView를 설치해서 .ugoira 파일을 재생할 수 있지만, 다른 운영체제에는 비슷한 소프트웨어가 없을 수도 있습니다. <br>
+<br>
+하위 옵션:<br>
+- WebP 이미지 품질: WebP 이미지의 품질을 설정할 수 있습니다. 기본값은 고화질 손실 압축이며, 무손실 압축으로 바꿀 수도 있습니다.<br>
+- Ugoira용 썸네일 1장을 저장하기: Ugoira를 다운로드할 때 정적인 썸네일 파일 1장을 함께 저장합니다.<br>
+<br>
+추천 형식:<br>
+같은 화질일 때 파일 크기가 가장 작기 때문에, 우선 WebP 이미지를 추천합니다. 단점은 일부 오래된 이미지 뷰어에서는 WebP 애니메이션을 지원하지 않을 수 있다는 점입니다.<br>
+또한 Windows 사용자라면 Ugoira 파일도 아주 추천합니다. .ugoira 파일을 재생하려면 BandiView를 설치하면 되고, 무료 버전으로도 충분합니다. 이 경우 Ugoira 파일은 장점이 많습니다. 원본 파일이고, 무손실이며, 애니메이션 효과가 있고, 변환이 필요 없고, 파일 크기도 작습니다.<br>
+<br>
+형식별 파일 크기:<br>
+최근 Ugoira 작품 1000개를 다운로드해서 테스트했습니다. 아래는 각 형식의 평균 파일 크기이며, 참고용입니다.<br>
+- ZIP/Ugoira: 9 MB<br>
+- WebP: 7 MB(손실 압축) 또는 35 MB(무손실 압축)<br>
+- WebM: 10 MB<br>
+- GIF: 20 MB<br>
+- APNG: 48 MB<br>
+작은 것부터 큰 것 순서: WebP(손실) < ZIP/Ugoira < WebM < GIF < WebP(무손실) < APNG.<br>`,
+        `Загрузчик может сохранять Ugoira в нескольких форматах, и при необходимости вы можете выбрать сразу несколько форматов одновременно.<br>
+<br>
+Список форматов:<br>
+- Изображение WebP: можно выбрать сжатие с потерями или без потерь. По сравнению с другими форматами изображений, при одинаковом качестве у него самый маленький размер файла, поэтому этот вариант рекомендуется.<br>
+- Видео WebM: сжатие с потерями. Это видеофайл, поэтому для открытия нужен видеоплеер.<br>
+- Изображение GIF: сжатие с потерями. Плюс в хорошей совместимости, но минусы в том, что качество изображения хуже всего, а размер файла сравнительно большой, поэтому этот вариант не рекомендуется.<br>
+- Изображение APNG: сжатие без потерь. Минусы в том, что размер файла самый большой, и конвертация занимает больше всего времени.<br>
+- ZIP-файл: без потерь. Это исходный файл Ugoira, в котором содержится несколько статических изображений, а загрузчик также добавляет внутрь JSON-файл для сохранения метаданных анимации.<br>
+- Файл Ugoira: без потерь. На самом деле это обычный ZIP-файл, только с расширением .ugoira. В Windows можно установить BandiView для воспроизведения файлов .ugoira, но в других системах похожего ПО может не быть. <br>
+<br>
+Подпункты:<br>
+- Качество изображения WebP: вы можете настроить качество изображений WebP. По умолчанию используется высококачественное сжатие с потерями. При желании можно переключить и на сжатие без потерь.<br>
+- Сохранить одну миниатюру для Ugoira: при скачивании Ugoira сохранить один статический файл миниатюры.<br>
+<br>
+Рекомендуемые форматы:<br>
+В первую очередь я рекомендую использовать изображения WebP, потому что при одинаковом качестве у них самый маленький размер файла. Недостаток в том, что некоторые старые программы для просмотра изображений могут не поддерживать анимированный WebP.<br>
+Кроме того, пользователям Windows я также очень рекомендую формат Ugoira. Вы можете установить BandiView для воспроизведения файлов .ugoira, и бесплатной версии будет достаточно. В этом случае у файлов Ugoira много преимуществ: это исходный файл, без потерь, с анимацией, без необходимости конвертации, и при этом он тоже небольшой по размеру.<br>
+<br>
+Размер каждого формата:<br>
+Я скачал и протестировал 1000 недавних работ Ugoira. Ниже приведен средний размер файла для каждого формата, только для справки:<br>
+- ZIP/Ugoira: 9 MB<br>
+- WebP: 7 MB (сжатие с потерями) или 35 MB (сжатие без потерь)<br>
+- WebM: 10 MB<br>
+- GIF: 20 MB<br>
+- APNG: 48 MB<br>
+Сортировка от меньшего к большему: WebP (с потерями) < ZIP/Ugoira < WebM < GIF < WebP (без потерь) < APNG.<br>`,
     ],
     _webmVideo: [
         'WebM 视频',
@@ -29460,7 +29757,41 @@ Zip 파일이 원본 파일입니다.`,
         'WebM 동영상',
         'WebM видео',
     ],
-    _gif: [
+    _webp图片: [
+        'WebP 图片',
+        '圖片（WebP）',
+        'WebP image',
+        'WebP 画像',
+        'WebP 이미지',
+        'WebP изображение',
+    ],
+    _WebP图像质量: [
+        `WebP 图像质量`,
+        `WebP 圖像品質`,
+        `WebP image quality`,
+        `WebP 画像品質`,
+        `WebP 이미지 품질`,
+        `Качество изображения WebP`,
+    ],
+    _有损: ['有损', '有損', 'Lossy', '非可逆', '손실', 'С потерями'],
+    _无损: ['无损', '無損', 'Lossless', '可逆', '무손실', 'Без потерь'],
+    _为动图保存一张缩略图: [
+        `为动图保存一张缩略图`,
+        `為動圖儲存一張縮圖`,
+        `Save a thumbnail for Ugoira`,
+        `Ugoira 用にサムネイルを1枚保存する`,
+        `Ugoira용 썸네일 1장을 저장하기`,
+        `Сохранить одну миниатюру для Ugoira`,
+    ],
+    _跳过这个缩略图: [
+        `跳过这个缩略图`,
+        `跳過這張縮圖`,
+        `Skip this thumbnail`,
+        `このサムネイルをスキップ`,
+        `이 썸네일 건너뛰기`,
+        `Пропустить эту миниатюру`,
+    ],
+    _gif图片: [
         'GIF 图片',
         '圖片（GIF）',
         'GIF image',
@@ -29468,7 +29799,7 @@ Zip 파일이 원본 파일입니다.`,
         'GIF 이미지',
         'GIF изображение',
     ],
-    _apng: [
+    _apng图片: [
         'APNG 图片',
         '圖片（APNG）',
         'APNG image',
@@ -29476,13 +29807,21 @@ Zip 파일이 원본 파일입니다.`,
         'APNG 이미지',
         'APNG изображение',
     ],
-    _zipFile: [
+    _zip文件: [
         'ZIP 文件',
         '壓縮檔（ZIP）',
         'ZIP file',
         'ZIP ファイル',
         'ZIP 파일',
         'ZIP файл',
+    ],
+    _Ugoira文件: [
+        `Ugoira 文件`,
+        `Ugoira 檔案`,
+        `Ugoira file`,
+        `Ugoira ファイル`,
+        `Ugoira 파일`,
+        `Файл Ugoira`,
     ],
     _当前有x个作品: [
         '当前有 {} 个作品',
@@ -31727,7 +32066,6 @@ Note: Even if you disable this setting, some quick download methods will always 
         'Правило наименования сохранено',
     ],
     _命名: ['命名', '命名', 'Naming', '命名', '이름', 'Имя'],
-    _无损: ['无损', '無損', 'Lossless', 'ロスレス', '무손실', 'Без потерь'],
     _文件名长度限制: [
         '文件名<span class="key">长度</span>限制',
         '檔案名稱<span class="key">長度</span>限制',
@@ -42266,27 +42604,52 @@ const formHtml = `
         <span data-xztext="_动图保存格式"></span>
       </a>
 
-      <input type="checkbox" name="ugoiraSaveAsWebM" id="ugoiraSaveAsWebM" class="need_beautify checkbox_common" checked>
-      <span class="beautify_checkbox" tabindex="0"></span>
-      <label for="ugoiraSaveAsWebM" data-xztext="_webmVideo"></label>
-
-      <input type="checkbox" name="ugoiraSaveAsGIF" id="ugoiraSaveAsGIF" class="need_beautify checkbox_common">
-      <span class="beautify_checkbox" tabindex="0"></span>
-      <label for="ugoiraSaveAsGIF" data-xztext="_gif"></label>
-
-      <input type="checkbox" name="ugoiraSaveAsAPNG" id="ugoiraSaveAsAPNG" class="need_beautify checkbox_common">
-      <span class="beautify_checkbox" tabindex="0"></span>
-      <label for="ugoiraSaveAsAPNG" data-xztext="_apng"></label>
-
-      <input type="checkbox" name="ugoiraSaveAsZIP" id="ugoiraSaveAsZIP" class="need_beautify checkbox_common">
-      <span class="beautify_checkbox" tabindex="0"></span>
-      <label for="ugoiraSaveAsZIP" data-xztext="_zipFile"></label>
-
-      <input type="checkbox" name="ugoiraSaveAsUgoira" id="ugoiraSaveAsUgoira" class="need_beautify checkbox_common">
-      <span class="beautify_checkbox" tabindex="0"></span>
-      <label for="ugoiraSaveAsUgoira">Ugoira</label>
-
       <button type="button" class="textButton gray1 showMsgBtn" data-title="_动图保存格式" data-msg="_动图保存格式的说明" data-xztext="_帮助"></button>
+
+      <span class="subOptionWrap flexBasis100" style="display: inline-flex;">
+
+        <input type="checkbox" name="ugoiraSaveAsWebP" id="ugoiraSaveAsWebP" class="need_beautify checkbox_common" checked>
+        <span class="beautify_checkbox" tabindex="0"></span>
+        <label for="ugoiraSaveAsWebP" data-xztext="_webp图片"></label>
+
+        <input type="checkbox" name="ugoiraSaveAsWebM" id="ugoiraSaveAsWebM" class="need_beautify checkbox_common">
+        <span class="beautify_checkbox" tabindex="0"></span>
+        <label for="ugoiraSaveAsWebM" data-xztext="_webmVideo"></label>
+
+        <input type="checkbox" name="ugoiraSaveAsGIF" id="ugoiraSaveAsGIF" class="need_beautify checkbox_common">
+        <span class="beautify_checkbox" tabindex="0"></span>
+        <label for="ugoiraSaveAsGIF" data-xztext="_gif图片"></label>
+
+        <input type="checkbox" name="ugoiraSaveAsAPNG" id="ugoiraSaveAsAPNG" class="need_beautify checkbox_common">
+        <span class="beautify_checkbox" tabindex="0"></span>
+        <label for="ugoiraSaveAsAPNG" data-xztext="_apng图片"></label>
+
+        <input type="checkbox" name="ugoiraSaveAsZIP" id="ugoiraSaveAsZIP" class="need_beautify checkbox_common">
+        <span class="beautify_checkbox" tabindex="0"></span>
+        <label for="ugoiraSaveAsZIP" data-xztext="_zip文件"></label>
+
+        <input type="checkbox" name="ugoiraSaveAsUgoira" id="ugoiraSaveAsUgoira" class="need_beautify checkbox_common">
+        <span class="beautify_checkbox" tabindex="0"></span>
+        <label for="ugoiraSaveAsZIP" data-xztext="_Ugoira文件"></label>
+
+        <span class="verticalSplit"></span>
+        
+        <span data-xztext="_WebP图像质量"></span>
+        <input type="radio" name="animatedWebPQuality" id="webpUgoiraQuality0" class="need_beautify radio" value="lossy" checked>
+        <span class="beautify_radio" tabindex="0"></span>
+        <label for="webpUgoiraQuality0" data-xztext="_有损"></label>
+
+        <input type="radio" name="animatedWebPQuality" id="webpUgoiraQuality1" class="need_beautify radio" value="lossless">
+        <span class="beautify_radio" tabindex="0"></span>
+        <label for="webpUgoiraQuality1" data-xztext="_无损"></label>
+
+        <span class="verticalSplit"></span>
+
+        <label for="saveThumbnailForUgoira" data-xztext="_为动图保存一张缩略图"></label>
+        <input type="checkbox" name="saveThumbnailForUgoira" id="saveThumbnailForUgoira" class="need_beautify checkbox_switch">
+        <span class="beautify_switch" tabindex="0"></span>
+
+      </span>
 
     </div>
 
@@ -43197,10 +43560,12 @@ class FormSettings {
             'doNotCrawlFirstImagesSwitch',
             'useTagAliasForTagsNamingRule',
             'ugoiraSaveAsWebM',
+            'ugoiraSaveAsWebP',
             'ugoiraSaveAsGIF',
             'ugoiraSaveAsAPNG',
             'ugoiraSaveAsZIP',
             'ugoiraSaveAsUgoira',
+            'saveThumbnailForUgoira',
         ],
         text: [
             'onlyCrawlFirstFewImagesCount',
@@ -43275,6 +43640,7 @@ class FormSettings {
             'copyImageSize',
             'logVisibleDefault',
             'serialNoStart',
+            'animatedWebPQuality',
         ],
         textarea: [
             'notNeedTag',
@@ -45151,12 +45517,15 @@ class Settings {
         downBlackWhiteImg: true,
         downNotBookmarked: true,
         downBookmarked: true,
-        ugoiraSaveAs: 'webm',
-        ugoiraSaveAsWebM: true,
+        ugoiraSaveAs: 'webp',
+        ugoiraSaveAsWebM: false,
+        ugoiraSaveAsWebP: true,
         ugoiraSaveAsGIF: false,
         ugoiraSaveAsAPNG: false,
         ugoiraSaveAsZIP: false,
         ugoiraSaveAsUgoira: false,
+        animatedWebPQuality: 'lossy',
+        saveThumbnailForUgoira: false,
         convertUgoiraThread: 1,
         needTag: [],
         notNeedTag: [],
@@ -45629,9 +45998,10 @@ class Settings {
         if (valueType === 'string') {
             value = _ConvertOldSettings__WEBPACK_IMPORTED_MODULE_3__.convertOldSettings.convertString(key, value);
         }
-        // 使用旧的 ugoiraSaveAs 值，设置对应的选项的选中状态
+        // 如果存在旧的 ugoiraSaveAs 设置，就使用它的值来设置一些新的设置的状态
         if (key === 'ugoiraSaveAs') {
             this.settings.ugoiraSaveAsWebM = value === 'webm';
+            this.settings.ugoiraSaveAsWebP = value === 'webp';
             this.settings.ugoiraSaveAsGIF = value === 'gif';
             this.settings.ugoiraSaveAsAPNG = value === 'apng';
             this.settings.ugoiraSaveAsZIP = value === 'zip';
@@ -46722,6 +47092,7 @@ class SaveArtworkData {
                 const ugoiraInfo = {
                     frames: meta.body.frames,
                     mime_type: meta.body.mime_type,
+                    originalThumbnail: body.urls.original,
                 };
                 let ext = 'zip';
                 // 当下载动图的方形缩略图时，从它的 url 里获取图片的扩展名
@@ -65681,6 +66052,10 @@ class Utils {
         }
         const rect = el.getBoundingClientRect();
         return x > rect.left && x < rect.right && y > rect.top && y < rect.bottom;
+    }
+    /** 为传入的 URL 创建一个 A 标签的字符串 */
+    static createLinkHTML(url) {
+        return `<a href="${url}" target="_blank">${url}</a>`;
     }
 }
 

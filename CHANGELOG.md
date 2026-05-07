@@ -1,13 +1,13 @@
 # CHANGLOG
 
 在 Pixiv 的 console 里隐藏这些脚本的消息：
--doubleclick.net -admanmedia.com -frame -popin -bpoadfkcbjbfhfodiogcnhhhpibjhbnh -_script.js -_app- -_app. -reach -ufs -pubads -google -tabool
+-doubleclick.net -admanmedia.com -frame -popin -bpoadfkcbjbfhfodiogcnhhhpibjhbnh -_script.js -_app- -_app. -reach -ufs -pubads -google -tabool -openx -sync
 
 ## next 2026-04-30
 
 需要调整动图保存格式的帮助信息
 
-提示 zip 和 ugoira 可以用 Icaros 显示预览图。
+提示 zip 和 ugoira 可以用 Icaros 显示预览图。实际上除了动态 WebP 无法使用 Icaros 显示预览图，其他的都可以。
 
 ### ⚠️🔧调整了“不创建文件夹”设置的子选项
 
@@ -17,13 +17,81 @@
 
 ### 🔧调整了“动图保存格式”设置
 
-改动如下：
-- 你可以同时选择多种动图格式。下载器可以在一次下载里把动图转换为多种格式。
-- 添加了一些格式和选项。
+添加了更多格式：
+- WebP 图片（有损）
+- WebP 图片（无损）
+- Ugoria（可使用 BandiView 播放的 ZIP 原档文件）
+
+多选：
+你可以同时选择多种动图格式。下载器可以在一次下载里把动图转换为多种格式。
+
+另外，动图转换时的默认格式从 WebM 改为了 WebP。不过这不会影响之前已经在使用下载器的用户，只会影响新安装下载器或重置了设置的用户。
+
+--------
+
+性能测试：
+
+抓取“うごイラ”标签里 1 页 60 个动图：
+https://www.pixiv.net/tags/%E3%81%86%E3%81%94%E3%82%A4%E3%83%A9/artworks?ai_type=1
+
+下载设置：
+- 勾选了所有 6 种格式，其中 WebP 选择的是无损
+- 同时下载 3 个文件
+- 同时最多转换 3 个动图
+
+在下载过程中，该标签页的内存占用大部分时间在 3 GB - 4 GB 之间，可以接受。偶尔在转换一些很大的 zip 文件时会超过 5 GB，但这种情况占比不高。
+
+------------再次测试---------------
+
+60 个动图生成了 360 个文件，数量正确。文件体积 8 GB。耗时一共 17 分钟，效率挺高的。
+
+比较大的文件有：
+- 45 MB：[144280088](https://www.pixiv.net/artworks/144280088)
+- 39 MB：[144281961](https://www.pixiv.net/artworks/144281961)
+- 25 MB：[144273209](https://www.pixiv.net/artworks/144273209)
+
+----------
+
+WebP 无损和有损的体积：
+
+在这 60 个动图里，WebP 无损的总体积是 2.15 GB，有损的总体积是 486 MB，体积是无损的 22%。
 
 ### 😊优化了一些帮助信息
 
 我发现很多用户依然搞不懂“为多图作品添加一层文件夹”和“为 R-18(G) 作品添加一层文件夹”怎么用，可能是因为之前的帮助信息写的不够明确易懂，所以我优化了它们的帮助信息。
+
+### ⚡降低了转换动图过程中，提取图片数据的时间
+
+`Tools.extractImage()` 方法里会使用 `createImageBitmap(blob)` 把图片从 Blob 对象转换成 ImageBitmap 数据。处理多张图片时，之前是串行的，一张图片转换完成后才会转换下一张图片。现在使用 Promise.all 改为并行，大幅缩短了提取 zip 文件里所有图片数据的时间。
+
+另外 `createImageBitmap` 方法与图片的分辨率有关，分辨率越大，耗时就越久。使用并行处理也缩小了分辨率差异导致的时间差别。
+
+---------
+
+对两个大文件的简单测试：（CPU 是 i5-12400）
+
+文件 1: https://www.pixiv.net/artworks/144180350
+
+27 MB 的 zip 文件，有 149 张图片，分辨率都是 1920x1080。
+
+生成 ImageBitmapList 需要 1.6 秒。
+
+文件 2: https://www.pixiv.net/artworks/143949972
+
+26 MB 的 zip 文件，有 145 张图片，分辨率都是 640x360
+
+这两个文件的体积相近、图片数量相近、每张图片的体积相近。差别最大的地方是分辨率。
+
+生成 ImageBitmapList 的耗时：
+
+| -      | 文件 1 | 文件2 |
+| ------ | ------ | ----- |
+| 优化前 | 1.6 s  | 0.6s  |
+| 优化后 | 530 ms | 270ms |
+
+使用并发优化后，时间缩短了很多，尤其是对于分辨率大的图片，减少的时间更多。
+
+当然，那些体积本来就小的 zip 文件本来耗时就比较少，所以这个优化措施对它们的效果有限。不过多少也能减少耗时。
 
 ## 18.8.2 2026-04-28
 

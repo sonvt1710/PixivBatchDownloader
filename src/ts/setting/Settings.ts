@@ -116,12 +116,15 @@ interface XzSetting {
   downNotBookmarked: boolean
   downBookmarked: boolean
   /** 该设置仅为保留兼容性而存在。新设置会从它里面继承用户以前保存的动图转换格式 */
-  ugoiraSaveAs: 'webm' | 'gif' | 'zip' | 'apng'
+  ugoiraSaveAs: 'webm' | 'webp' | 'gif' | 'zip' | 'apng'
   ugoiraSaveAsWebM: boolean
+  ugoiraSaveAsWebP: boolean
   ugoiraSaveAsGIF: boolean
   ugoiraSaveAsAPNG: boolean
   ugoiraSaveAsZIP: boolean
   ugoiraSaveAsUgoira: boolean
+  animatedWebPQuality: 'lossy' | 'lossless'
+  saveThumbnailForUgoira: boolean
   convertUgoiraThread: number
   needTagSwitch: boolean
   notNeedTagSwitch: boolean
@@ -630,12 +633,15 @@ class Settings {
     downBlackWhiteImg: true,
     downNotBookmarked: true,
     downBookmarked: true,
-    ugoiraSaveAs: 'webm',
-    ugoiraSaveAsWebM: true,
+    ugoiraSaveAs: 'webp',
+    ugoiraSaveAsWebM: false,
+    ugoiraSaveAsWebP: true,
     ugoiraSaveAsGIF: false,
     ugoiraSaveAsAPNG: false,
     ugoiraSaveAsZIP: false,
     ugoiraSaveAsUgoira: false,
+    animatedWebPQuality: 'lossy',
+    saveThumbnailForUgoira: false,
     convertUgoiraThread: 1,
     needTag: [],
     notNeedTag: [],
@@ -1148,9 +1154,10 @@ class Settings {
       value = convertOldSettings.convertString(key, value as string)
     }
 
-    // 使用旧的 ugoiraSaveAs 值，设置对应的选项的选中状态
+    // 如果存在旧的 ugoiraSaveAs 设置，就使用它的值来设置一些新的设置的状态
     if (key === 'ugoiraSaveAs') {
       this.settings.ugoiraSaveAsWebM = value === 'webm'
+      this.settings.ugoiraSaveAsWebP = value === 'webp'
       this.settings.ugoiraSaveAsGIF = value === 'gif'
       this.settings.ugoiraSaveAsAPNG = value === 'apng'
       this.settings.ugoiraSaveAsZIP = value === 'zip'
