@@ -45,7 +45,6 @@
         "lib/jszip.min.js",
         "lib/jepub.js",
         "lib/pako.min.js",
-        "lib/UPNG.js",
         "lib/ppd-webp.js",
         "lib/iconfont.js",
         "js/content.js"
@@ -93,8 +92,11 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "lib/gif.worker.js",
         "lib/ppd-webp.worker.js",
+        "lib/pako.min.js",
+        "lib/UPNG.js",
+        "lib/apng.worker.js",
+        "lib/gif.worker.js",
         "lib/listen_history_change.js",
         "lib/api_interceptor.js",
         "manifest.json",

@@ -3020,10 +3020,42 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   toAPNG: () => (/* binding */ toAPNG)
 /* harmony export */ });
-/* harmony import */ var _EVT__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../EVT */ "./src/ts/EVT.ts");
+/* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! webextension-polyfill */ "./node_modules/webextension-polyfill/dist/browser-polyfill.js");
+/* harmony import */ var webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(webextension_polyfill__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _EVT__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../EVT */ "./src/ts/EVT.ts");
+
 
 class ToAPNG {
+    worker;
+    workerReady = null;
+    async loadWorker() {
+        // 把 pako.min.js、UPNG.js 和 worker 脚本合并成一个 blob
+        // UPNG.js 在编码时依赖 pako 的 deflate，所以必须先加载 pako
+        const [pakoRes, upngRes, workerRes] = await Promise.all([
+            fetch(webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().runtime.getURL('lib/pako.min.js')),
+            fetch(webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().runtime.getURL('lib/UPNG.js')),
+            fetch(webextension_polyfill__WEBPACK_IMPORTED_MODULE_0___default().runtime.getURL('lib/apng.worker.js')),
+        ]);
+        const [pakoText, upngText, workerText] = await Promise.all([
+            pakoRes.text(),
+            upngRes.text(),
+            workerRes.text(),
+        ]);
+        const blob = new Blob([pakoText, '\n', upngText, '\n', workerText], {
+            type: 'application/javascript',
+        });
+        const url = URL.createObjectURL(blob);
+        this.worker = new Worker(url);
+        URL.revokeObjectURL(url);
+        this.worker.onerror = (ev) => {
+            console.error('APNG worker error:', ev);
+        };
+    }
     async convert(ImageBitmapList, info) {
+        if (!this.workerReady) {
+            this.workerReady = this.loadWorker();
+        }
+        await this.workerReady;
         const width = ImageBitmapList[0].width;
         const height = ImageBitmapList[0].height;
         const canvas = document.createElement('canvas');
@@ -3032,7 +3064,7 @@ class ToAPNG {
         });
         canvas.width = width;
         canvas.height = height;
-        // 添加帧数据
+        // 提取每帧的像素数据
         let arrayBuffList = [];
         ImageBitmapList.forEach((imageBitmap) => {
             ctx.drawImage(imageBitmap, 0, 0);
@@ -3041,15 +3073,44 @@ class ToAPNG {
             arrayBuffList.push(buff);
         });
         const delayList = info.frames.map((frame) => frame.delay);
-        // 编码
+        // 在 worker 中编码，避免阻塞主线程
         // https://github.com/photopea/UPNG.js/#encoder
-        const pngFile = UPNG.encode(arrayBuffList, width, height, 0, delayList);
+        const pngFile = await this.encodeInWorker(arrayBuffList, width, height, delayList);
         const blob = new Blob([pngFile], {
             type: 'image/vnd.mozilla.apng',
         });
-        _EVT__WEBPACK_IMPORTED_MODULE_0__.EVT.fire('convertSuccess');
+        _EVT__WEBPACK_IMPORTED_MODULE_1__.EVT.fire('convertSuccess');
         arrayBuffList = null;
         return blob;
+    }
+    // 使用自增 ID 区分并发请求，确保多线程转换时响应能正确匹配
+    messageId = 0;
+    encodeInWorker(arrayBuffList, width, height, delayList) {
+        return new Promise((resolve, reject) => {
+            const id = ++this.messageId;
+            const timeoutId = window.setTimeout(() => {
+                this.worker.removeEventListener('message', handler);
+                reject(new Error('APNG encoding timeout'));
+            }, 120000);
+            const handler = (ev) => {
+                if (ev.data.id !== id)
+                    return;
+                window.clearTimeout(timeoutId);
+                this.worker.removeEventListener('message', handler);
+                if (ev.data.error) {
+                    reject(new Error(ev.data.error));
+                }
+                else if (!(ev.data.result instanceof ArrayBuffer)) {
+                    reject(new Error('Invalid APNG worker response'));
+                }
+                else {
+                    resolve(ev.data.result);
+                }
+            };
+            this.worker.addEventListener('message', handler);
+            // 以 Transferable 方式传递 ArrayBuffer，零拷贝转移所有权
+            this.worker.postMessage({ id, arrayBuffList, width, height, delayList }, arrayBuffList);
+        });
     }
 }
 const toAPNG = new ToAPNG();
@@ -21796,7 +21857,7 @@ class Download {
                     userId: result.userId,
                     regularSrc: result.regular,
                     originalSrc: result.original,
-                    thumbnail: result.ugoiraInfo.originalThumbnail || result.thumb
+                    thumbnail: result.ugoiraInfo.originalThumbnail || result.thumb,
                 };
                 // 把 animationInfo 写入 animation.json，并添加到 zip 文件里
                 const zip = await new JSZip().loadAsync(zipFile);
@@ -29600,7 +29661,7 @@ And so on.
 - GIF 图片：有损压缩。优点是兼容性好，缺点是画质最差，体积也比较大，不推荐。<br>
 - APNG 图片：无损压缩。缺点是体积最大，而且转换耗时也最长。<br>
 - ZIP 文件：无损。它是动图的源文件，包含多张静态图片，并且下载器会在里面添加一个 JSON 文件保存动画的元数据。<br>
-- Ugoira 文件：无损。它其实就是 ZIP 文件，只是扩展名为 .ugoira。在 Windows 系统里，你可以安装 BandiView 来播放 .ugoira 文件，但是其他系统可能没有类似的软件。 <br>
+- Ugoira 文件：无损。它其实就是 ZIP 文件，只是扩展名为 .ugoira。<br>
 <br>
 子选项：<br>
 - WebP 图像质量：你可以设置 WebP 图片的质量，默认是高质量的有损压缩。你也可以改为无损压缩。<br>
@@ -29608,7 +29669,7 @@ And so on.
 <br>
 推荐的格式：<br>
 我推荐优先使用 WebP 图片，因为它在相同画质时的体积最小。缺点是一些比较旧的看图软件可能不支持查看 WebP 动图。<br>
-另外，对于 Windows 用户我也很推荐使用 Ugoira 文件。你可以安装 BandiView 来播放 .ugoira 文件（免费版即可），此时 Ugoira 文件有很多优点：原始文件，无损，有动画效果，无须转换，体积也小。<br>
+另外，对于 Windows 用户我也很推荐使用 Ugoira 文件。你可以安装 <a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a> 来播放 .ugoira 文件（免费版即可），此时 Ugoira 文件有很多优点：原始文件，无损，有动画效果，无须转换，体积也小。但是其他系统可能没有类似的软件。<br>
 <br>
 每种格式的体积：<br>
 我下载了近期的 1000 个动图作品进行测试，下面是每种格式的平均体积，仅供参考：<br>
@@ -29617,7 +29678,14 @@ And so on.
 - WebM：10 MB<br>
 - GIF：20 MB<br>
 - APNG：48 MB<br>
-从小到大排序：WebP（有损）< ZIP/Ugoira < WebM < GIF < WebP（无损）< APNG。<br>`,
+从小到大排序：WebP（有损）< ZIP/Ugoira < WebM < GIF < WebP（无损）< APNG。<br>
+<br>
+在资源管理器里显示缩略图：<br>
+这部分说明只适用于 Windows 系统。通过一些设置，你可以在资源管理器里查看所有动图格式的缩略图。<br>
+- GIF 图片：系统本身就支持显示它的缩略图。<br>
+- WebP 图片：安装 <a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a>，然后按 F5 打开它的设置，在“快捷菜单”设置的“缩略图预览”里选择 WebP 格式，即可显示 WebP 动画的缩略图。<br>
+- WebM 视频：安装 <a href="https://www.codecguide.com/download_k-lite_codec_pack_standard.htm" target="_blank">K-Lite Codec Pack</a> 即可显示 WebM 视频的缩略图。<br>
+- APNG 图片、ZIP 文件、Ugoira 文件：在 Icaros 里添加这些格式的扩展名，就可以显示它们的缩略图。如果你安装了 K-Lite Codec Pack，那么它应该自带了 Icaros，你可以在开始菜单里搜索来找到它。如果你找不到它，也可以单独安装 <a href="https://github.com/Xanashi/Icaros/releases" target="_blank">Icaros</a>。运行 Icaros，启用它的缩略图功能，在文件类型列表的末尾添加 <span class="blue">;apng;zip;ugoira</span>，或者把对应类型的文件拖拽到 Icaros 的窗口里来添加它。<br>`,
         `下載器可以把動圖儲存為多種格式，而且你可以依照需要同時選擇多種格式。<br>
 <br>
 格式列表：<br>
@@ -29626,7 +29694,7 @@ And so on.
 - GIF 圖片：有損壓縮。優點是相容性好，缺點是畫質最差，體積也比較大，不推薦。<br>
 - APNG 圖片：無損壓縮。缺點是體積最大，而且轉換耗時也最久。<br>
 - ZIP 檔案：無損。它是動圖的原始檔案，包含多張靜態圖片，而且下載器會在裡面加入一個 JSON 檔案來保存動畫的中繼資料。<br>
-- Ugoira 檔案：無損。它其實就是 ZIP 檔案，只是副檔名為 .ugoira。在 Windows 系統裡，你可以安裝 BandiView 來播放 .ugoira 檔案，但其他系統可能沒有類似的軟體。 <br>
+- Ugoira 檔案：無損。它其實就是 ZIP 檔案，只是副檔名為 .ugoira。<br>
 <br>
 子選項：<br>
 - WebP 圖像品質：你可以設定 WebP 圖片的品質，預設是高品質的有損壓縮。你也可以改成無損壓縮。<br>
@@ -29634,7 +29702,7 @@ And so on.
 <br>
 推薦的格式：<br>
 我推薦優先使用 WebP 圖片，因為它在相同畫質時的體積最小。缺點是一些比較舊的看圖軟體可能不支援查看 WebP 動圖。<br>
-另外，對於 Windows 使用者，我也很推薦使用 Ugoira 檔案。你可以安裝 BandiView 來播放 .ugoira 檔案（免費版即可），這樣一來 Ugoira 檔案有很多優點：原始檔案、無損、有動畫效果、不需要轉換，而且體積也小。<br>
+另外，對於 Windows 使用者，我也很推薦使用 Ugoira 檔案。你可以安裝 <a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a> 來播放 .ugoira 檔案（免費版即可），這樣 Ugoira 檔案有很多優點：原始檔案、無損、有動畫效果、不需要轉換，而且體積也小。不過其他系統可能沒有類似的軟體。<br>
 <br>
 每種格式的體積：<br>
 我下載了近期的 1000 個動圖作品進行測試，下面是每種格式的平均體積，僅供參考：<br>
@@ -29643,24 +29711,31 @@ And so on.
 - WebM：10 MB<br>
 - GIF：20 MB<br>
 - APNG：48 MB<br>
-從小到大排序：WebP（有損）< ZIP/Ugoira < WebM < GIF < WebP（無損）< APNG。<br>`,
-        `The downloader can save Ugoira in multiple formats, and you can select multiple formats at the same time if needed.<br>
+從小到大排序：WebP（有損）< ZIP/Ugoira < WebM < GIF < WebP（無損）< APNG。<br>
+<br>
+在檔案總管裡顯示縮圖：<br>
+這部分說明只適用於 Windows 系統。透過一些設定，你可以在檔案總管裡查看所有動圖格式的縮圖。<br>
+- GIF 圖片：系統本身就支援顯示它的縮圖。<br>
+- WebP 圖片：安裝 <a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a>，然後按 F5 打開它的設定，在 "快捷選單" 設定的 "縮圖預覽" 裡選擇 WebP 格式，即可顯示 WebP 動畫的縮圖。<br>
+- WebM 影片：安裝 <a href="https://www.codecguide.com/download_k-lite_codec_pack_standard.htm" target="_blank">K-Lite Codec Pack</a> 即可顯示 WebM 影片的縮圖。<br>
+- APNG 圖片、ZIP 檔案、Ugoira 檔案：在 Icaros 裡加入這些格式的副檔名，就可以顯示它們的縮圖。如果你安裝了 K-Lite Codec Pack，那它應該會附帶 Icaros，你可以在開始功能表裡搜尋找到它。如果你找不到它，也可以單獨安裝 <a href="https://github.com/Xanashi/Icaros/releases" target="_blank">Icaros</a>。執行 Icaros，啟用它的縮圖功能，在檔案類型列表的末尾添加 <span class="blue">;apng;zip;ugoira</span>，或者把對應類型的檔案拖曳到 Icaros 的視窗裡來添加它。<br>`,
+        `The downloader can save Ugoira in multiple formats, and you can also choose multiple formats at the same time if needed.<br>
 <br>
 Format list:<br>
 - WebP image: You can choose either lossy or lossless compression. Compared with other image formats, it has the smallest file size at the same image quality, so it is recommended.<br>
-- WebM video: Lossy compression. This is a video file, so you need a video player to open it.<br>
+- WebM video: Lossy compression. It is a video file, so you need a video player to open it.<br>
 - GIF image: Lossy compression. Its advantage is good compatibility, but the drawbacks are the worst image quality and a relatively large file size, so it is not recommended.<br>
-- APNG image: Lossless compression. The drawback is that it has the largest file size and also takes the longest time to convert.<br>
-- ZIP file: Lossless. This is the source file of the Ugoira. It contains multiple static images, and the downloader adds a JSON file inside it to save the animation metadata.<br>
-- Ugoira file: Lossless. It is actually just a ZIP file with the .ugoira extension. On Windows, you can install BandiView to play .ugoira files, but other systems may not have similar software. <br>
+- APNG image: Lossless compression. The drawbacks are that it has the largest file size and also takes the longest time to convert.<br>
+- ZIP file: Lossless. It is the source file of the Ugoira, containing multiple static images, and the downloader also adds a JSON file inside it to save the animation metadata.<br>
+- Ugoira file: Lossless. It is basically just a ZIP file with the .ugoira extension.<br>
 <br>
 Sub-options:<br>
-- WebP image quality: You can set the quality of WebP images. The default is high-quality lossy compression. You can also change it to lossless compression.<br>
-- Save a thumbnail for Ugoira: When downloading Ugoira, save one static thumbnail file for it.<br>
+- WebP image quality: You can set the quality of WebP images. By default, it uses high-quality lossy compression. You can also change it to lossless compression.<br>
+- Save a thumbnail for Ugoira: When downloading Ugoira, also save one static thumbnail file for it.<br>
 <br>
 Recommended formats:<br>
 I recommend using WebP images first, because they have the smallest file size at the same image quality. The drawback is that some older image viewers may not support animated WebP images.<br>
-Also, I highly recommend Ugoira files for Windows users. You can install BandiView to play .ugoira files, and the free version is enough. In that case, Ugoira files have many advantages: original file, lossless, animated, no conversion needed, and small file size.<br>
+Also, I highly recommend Ugoira files for Windows users. You can install <a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a> to play .ugoira files, and the free version is enough. In that case, Ugoira files have many advantages: original file, lossless, animated, no conversion needed, and small file size. But other systems may not have similar software.<br>
 <br>
 File size of each format:<br>
 I downloaded and tested 1,000 recent Ugoira works. Below is the average file size of each format, for reference only:<br>
@@ -29669,7 +29744,14 @@ I downloaded and tested 1,000 recent Ugoira works. Below is the average file siz
 - WebM: 10 MB<br>
 - GIF: 20 MB<br>
 - APNG: 48 MB<br>
-Sorted from smallest to largest: WebP (lossy) < ZIP/Ugoira < WebM < GIF < WebP (lossless) < APNG.<br>`,
+Sorted from smallest to largest: WebP (lossy) < ZIP/Ugoira < WebM < GIF < WebP (lossless) < APNG.<br>
+<br>
+Show thumbnails in File Explorer:<br>
+This part only applies to Windows. With a few settings, you can view thumbnails for all Ugoira formats in File Explorer.<br>
+- GIF image: The system already supports showing its thumbnail.<br>
+- WebP image: Install <a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a>, then press F5 to open its settings. In the "Context Menu" settings, under "Thumbnail Preview", select the WebP format, and then thumbnails for animated WebP files will be shown.<br>
+- WebM video: Install <a href="https://www.codecguide.com/download_k-lite_codec_pack_standard.htm" target="_blank">K-Lite Codec Pack</a>, and thumbnails for WebM videos will be shown.<br>
+- APNG image, ZIP file, and Ugoira file: Add the extensions for these formats in Icaros, and their thumbnails can be shown. If you installed K-Lite Codec Pack, it should already include Icaros, and you can search for it in the Start menu. If you cannot find it, you can also install <a href="https://github.com/Xanashi/Icaros/releases" target="_blank">Icaros</a> separately. Run Icaros, enable its thumbnail feature, add <span class="blue">;apng;zip;ugoira</span> at the end of the file type list, or drag files of those types into the Icaros window to add them.<br>`,
         `ダウンローダーでは、Ugoira を複数の形式で保存できます。必要に応じて、複数の形式を同時に選ぶこともできます。<br>
 <br>
 形式一覧：<br>
@@ -29677,8 +29759,8 @@ Sorted from smallest to largest: WebP (lossy) < ZIP/Ugoira < WebM < GIF < WebP (
 - WebM 動画：非可逆圧縮です。動画ファイルなので、動画プレイヤーで開く必要があります。<br>
 - GIF 画像：非可逆圧縮です。互換性が高いのは利点ですが、画質が最も悪く、ファイルサイズも比較的大きいため、おすすめしません。<br>
 - APNG 画像：可逆圧縮です。欠点は、ファイルサイズが最も大きく、変換にかかる時間も最も長いことです。<br>
-- ZIP ファイル：可逆です。これは Ugoira の元ファイルで、複数の静止画像が含まれています。さらに、ダウンローダーがその中にアニメーションのメタデータを保存するための JSON ファイルを追加します。<br>
-- Ugoira ファイル：可逆です。実際には拡張子が .ugoira になった ZIP ファイルです。Windows では、BandiView をインストールすると .ugoira ファイルを再生できますが、他の OS では同様のソフトがないかもしれません。 <br>
+- ZIP ファイル：可逆です。これは Ugoira の元ファイルで、複数の静止画像が含まれています。さらに、ダウンローダーがその中にアニメーションのメタデータを保存する JSON ファイルを追加します。<br>
+- Ugoira ファイル：可逆です。実際には拡張子が .ugoira になった ZIP ファイルです。<br>
 <br>
 サブオプション：<br>
 - WebP 画像品質：WebP 画像の品質を設定できます。デフォルトは高品質の非可逆圧縮です。可逆圧縮に変更することもできます。<br>
@@ -29686,7 +29768,7 @@ Sorted from smallest to largest: WebP (lossy) < ZIP/Ugoira < WebM < GIF < WebP (
 <br>
 おすすめの形式：<br>
 まずは WebP 画像を使うのがおすすめです。同じ画質ならファイルサイズが最も小さいからです。欠点は、少し古い画像ビューアでは WebP アニメーションを表示できない場合があることです。<br>
-また、Windows ユーザーには Ugoira ファイルもとてもおすすめです。.ugoira ファイルを再生するために BandiView をインストールできます。無料版で十分です。この場合、Ugoira ファイルには多くの利点があります。元ファイル、可逆、アニメーションあり、変換不要、しかもサイズも小さいです。<br>
+また、Windows ユーザーには Ugoira ファイルもとてもおすすめです。.ugoira ファイルを再生するために <a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a> をインストールできます。無料版で十分です。この場合、Ugoira ファイルには多くの利点があります。元ファイル、可逆、アニメーションあり、変換不要、しかもサイズも小さいです。ただし、他の OS には同様のソフトがないかもしれません。<br>
 <br>
 各形式のファイルサイズ：<br>
 最近の Ugoira 作品を 1000 件ダウンロードしてテストしました。以下は各形式の平均ファイルサイズです。参考用です。<br>
@@ -29695,7 +29777,14 @@ Sorted from smallest to largest: WebP (lossy) < ZIP/Ugoira < WebM < GIF < WebP (
 - WebM：10 MB<br>
 - GIF：20 MB<br>
 - APNG：48 MB<br>
-小さい順に並べると、WebP（非可逆）< ZIP/Ugoira < WebM < GIF < WebP（可逆）< APNG です。<br>`,
+小さい順に並べると、WebP（非可逆）< ZIP/Ugoira < WebM < GIF < WebP（可逆）< APNG です。<br>
+<br>
+エクスプローラーでサムネイルを表示する：<br>
+この説明は Windows のみ対象です。いくつか設定すれば、エクスプローラーで全部の Ugoira 形式のサムネイルを表示できます。<br>
+- GIF 画像：システムがもともとサムネイル表示に対応しています。<br>
+- WebP 画像：<a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a> をインストールしてから、F5 を押して設定を開きます。"ショートカットメニュー" 設定の "サムネイルプレビュー" で WebP 形式を選ぶと、WebP アニメーションのサムネイルを表示できます。<br>
+- WebM 動画：<a href="https://www.codecguide.com/download_k-lite_codec_pack_standard.htm" target="_blank">K-Lite Codec Pack</a> をインストールすると、WebM 動画のサムネイルを表示できます。<br>
+- APNG 画像、ZIP ファイル、Ugoira ファイル：Icaros にこれらの形式の拡張子を追加すると、サムネイルを表示できます。K-Lite Codec Pack をインストールしていれば、Icaros も一緒に入っているはずなので、スタートメニューで検索して見つけられます。見つからない場合は、<a href="https://github.com/Xanashi/Icaros/releases" target="_blank">Icaros</a> を単独でインストールすることもできます。Icaros を起動してサムネイル機能を有効にし、ファイルタイプ一覧の末尾に <span class="blue">;apng;zip;ugoira</span> を追加するか、対応する種類のファイルを Icaros のウィンドウへドラッグ＆ドロップして追加してください。<br>`,
         `다운로더는 Ugoira를 여러 형식으로 저장할 수 있고, 필요에 따라 여러 형식을 동시에 선택할 수도 있습니다.<br>
 <br>
 형식 목록:<br>
@@ -29704,24 +29793,31 @@ Sorted from smallest to largest: WebP (lossy) < ZIP/Ugoira < WebM < GIF < WebP (
 - GIF 이미지: 손실 압축입니다. 장점은 호환성이 좋다는 점이지만, 단점은 화질이 가장 나쁘고 파일 크기도 비교적 커서 추천하지 않습니다.<br>
 - APNG 이미지: 무손실 압축입니다. 단점은 파일 크기가 가장 크고 변환 시간도 가장 오래 걸린다는 점입니다.<br>
 - ZIP 파일: 무손실입니다. 이것은 Ugoira의 원본 파일이며, 여러 장의 정적 이미지가 들어 있습니다. 또 다운로더가 그 안에 애니메이션 메타데이터를 저장하는 JSON 파일도 추가합니다.<br>
-- Ugoira 파일: 무손실입니다. 사실상 확장자만 .ugoira인 ZIP 파일입니다. Windows에서는 BandiView를 설치해서 .ugoira 파일을 재생할 수 있지만, 다른 운영체제에는 비슷한 소프트웨어가 없을 수도 있습니다. <br>
+- Ugoira 파일: 무손실입니다. 사실상 확장자만 .ugoira인 ZIP 파일입니다.<br>
 <br>
 하위 옵션:<br>
 - WebP 이미지 품질: WebP 이미지의 품질을 설정할 수 있습니다. 기본값은 고화질 손실 압축이며, 무손실 압축으로 바꿀 수도 있습니다.<br>
-- Ugoira용 썸네일 1장을 저장하기: Ugoira를 다운로드할 때 정적인 썸네일 파일 1장을 함께 저장합니다.<br>
+- Ugoira용 썸네일 1장을 저장하기: Ugoira를 다운로드할 때 정적인 썸네일 파일 1장도 함께 저장합니다.<br>
 <br>
 추천 형식:<br>
 같은 화질일 때 파일 크기가 가장 작기 때문에, 우선 WebP 이미지를 추천합니다. 단점은 일부 오래된 이미지 뷰어에서는 WebP 애니메이션을 지원하지 않을 수 있다는 점입니다.<br>
-또한 Windows 사용자라면 Ugoira 파일도 아주 추천합니다. .ugoira 파일을 재생하려면 BandiView를 설치하면 되고, 무료 버전으로도 충분합니다. 이 경우 Ugoira 파일은 장점이 많습니다. 원본 파일이고, 무손실이며, 애니메이션 효과가 있고, 변환이 필요 없고, 파일 크기도 작습니다.<br>
+또한 Windows 사용자라면 Ugoira 파일도 아주 추천합니다. <a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a>를 설치하면 .ugoira 파일을 재생할 수 있고, 무료 버전으로도 충분합니다. 이 경우 Ugoira 파일은 장점이 많습니다. 원본 파일이고, 무손실이며, 애니메이션 효과가 있고, 변환이 필요 없고, 파일 크기도 작습니다. 다만 다른 운영체제에는 비슷한 소프트웨어가 없을 수도 있습니다.<br>
 <br>
 형식별 파일 크기:<br>
 최근 Ugoira 작품 1000개를 다운로드해서 테스트했습니다. 아래는 각 형식의 평균 파일 크기이며, 참고용입니다.<br>
-- ZIP/Ugoira: 9 MB<br>
+- ZIP/Ugoira: 9MB<br>
 - WebP: 7 MB(손실 압축) 또는 35 MB(무손실 압축)<br>
 - WebM: 10 MB<br>
 - GIF: 20 MB<br>
 - APNG: 48 MB<br>
-작은 것부터 큰 것 순서: WebP(손실) < ZIP/Ugoira < WebM < GIF < WebP(무손실) < APNG.<br>`,
+작은 것부터 큰 것 순서: WebP(손실) < ZIP/Ugoira < WebM < GIF < WebP(무손실) < APNG.<br>
+<br>
+탐색기에서 썸네일 표시하기:<br>
+이 설명은 Windows에서만 적용됩니다. 몇 가지 설정을 하면 탐색기에서 모든 Ugoira 형식의 썸네일을 볼 수 있습니다.<br>
+- GIF 이미지: 시스템에서 원래 썸네일 표시를 지원합니다.<br>
+- WebP 이미지: <a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a>를 설치한 다음 F5를 눌러 설정을 엽니다. "바로가기 메뉴" 설정의 "썸네일 미리보기"에서 WebP 형식을 선택하면 WebP 애니메이션의 썸네일을 표시할 수 있습니다.<br>
+- WebM 비디오: <a href="https://www.codecguide.com/download_k-lite_codec_pack_standard.htm" target="_blank">K-Lite Codec Pack</a>를 설치하면 WebM 비디오의 썸네일을 표시할 수 있습니다.<br>
+- APNG 이미지, ZIP 파일, Ugoira 파일: Icaros에 이런 형식의 확장자를 추가하면 썸네일을 표시할 수 있습니다. K-Lite Codec Pack을 설치했다면 Icaros도 함께 들어 있을 가능성이 높으니 시작 메뉴에서 검색해서 찾을 수 있습니다. 찾을 수 없다면 <a href="https://github.com/Xanashi/Icaros/releases" target="_blank">Icaros</a>를 따로 설치해도 됩니다. Icaros를 실행하고 썸네일 기능을 켠 뒤, 파일 형식 목록 맨 끝에 <span class="blue">;apng;zip;ugoira</span> 를 추가하거나, 해당 형식의 파일을 Icaros 창으로 드래그해서 추가하면 됩니다.<br>`,
         `Загрузчик может сохранять Ugoira в нескольких форматах, и при необходимости вы можете выбрать сразу несколько форматов одновременно.<br>
 <br>
 Список форматов:<br>
@@ -29730,7 +29826,7 @@ Sorted from smallest to largest: WebP (lossy) < ZIP/Ugoira < WebM < GIF < WebP (
 - Изображение GIF: сжатие с потерями. Плюс в хорошей совместимости, но минусы в том, что качество изображения хуже всего, а размер файла сравнительно большой, поэтому этот вариант не рекомендуется.<br>
 - Изображение APNG: сжатие без потерь. Минусы в том, что размер файла самый большой, и конвертация занимает больше всего времени.<br>
 - ZIP-файл: без потерь. Это исходный файл Ugoira, в котором содержится несколько статических изображений, а загрузчик также добавляет внутрь JSON-файл для сохранения метаданных анимации.<br>
-- Файл Ugoira: без потерь. На самом деле это обычный ZIP-файл, только с расширением .ugoira. В Windows можно установить BandiView для воспроизведения файлов .ugoira, но в других системах похожего ПО может не быть. <br>
+- Файл Ugoira: без потерь. На самом деле это обычный ZIP-файл, только с расширением .ugoira.<br>
 <br>
 Подпункты:<br>
 - Качество изображения WebP: вы можете настроить качество изображений WebP. По умолчанию используется высококачественное сжатие с потерями. При желании можно переключить и на сжатие без потерь.<br>
@@ -29738,16 +29834,23 @@ Sorted from smallest to largest: WebP (lossy) < ZIP/Ugoira < WebM < GIF < WebP (
 <br>
 Рекомендуемые форматы:<br>
 В первую очередь я рекомендую использовать изображения WebP, потому что при одинаковом качестве у них самый маленький размер файла. Недостаток в том, что некоторые старые программы для просмотра изображений могут не поддерживать анимированный WebP.<br>
-Кроме того, пользователям Windows я также очень рекомендую формат Ugoira. Вы можете установить BandiView для воспроизведения файлов .ugoira, и бесплатной версии будет достаточно. В этом случае у файлов Ugoira много преимуществ: это исходный файл, без потерь, с анимацией, без необходимости конвертации, и при этом он тоже небольшой по размеру.<br>
+Кроме того, пользователям Windows я тоже очень рекомендую формат Ugoira. Вы можете установить <a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a> для воспроизведения файлов .ugoira, и бесплатной версии будет достаточно. В этом случае у файлов Ugoira много преимуществ: это исходный файл, без потерь, с анимацией, без необходимости конвертации, и при этом он тоже небольшой по размеру. Но в других системах похожего ПО может не быть.<br>
 <br>
 Размер каждого формата:<br>
 Я скачал и протестировал 1000 недавних работ Ugoira. Ниже приведен средний размер файла для каждого формата, только для справки:<br>
-- ZIP/Ugoira: 9 MB<br>
+- ZIP/Ugoira: 9MB<br>
 - WebP: 7 MB (сжатие с потерями) или 35 MB (сжатие без потерь)<br>
 - WebM: 10 MB<br>
 - GIF: 20 MB<br>
 - APNG: 48 MB<br>
-Сортировка от меньшего к большему: WebP (с потерями) < ZIP/Ugoira < WebM < GIF < WebP (без потерь) < APNG.<br>`,
+Сортировка от меньшего к большему: WebP (с потерями) < ZIP/Ugoira < WebM < GIF < WebP (без потерь) < APNG.<br>
+<br>
+Показ миниатюр в Проводнике:<br>
+Эта часть относится только к Windows. После некоторых настроек вы сможете видеть миниатюры всех форматов Ugoira в Проводнике.<br>
+- Изображение GIF: система уже сама поддерживает показ его миниатюр.<br>
+- Изображение WebP: установите <a href="https://www.bandisoft.com/bandiview/" target="_blank">BandiView</a>, затем нажмите F5, чтобы открыть его настройки. В настройках "Контекстное меню", в разделе "Предпросмотр миниатюр", выберите формат WebP, и тогда миниатюры анимированных WebP будут отображаться.<br>
+- Видео WebM: установите <a href="https://www.codecguide.com/download_k-lite_codec_pack_standard.htm" target="_blank">K-Lite Codec Pack</a>, и миниатюры видео WebM будут отображаться.<br>
+- Изображение APNG, ZIP-файл и файл Ugoira: добавьте расширения этих форматов в Icaros, и их миниатюры будут отображаться. Если у вас установлен K-Lite Codec Pack, то Icaros, скорее всего, уже входит в комплект, и его можно найти через поиск в меню "Пуск". Если вы не можете его найти, можно отдельно установить <a href="https://github.com/Xanashi/Icaros/releases" target="_blank">Icaros</a>. Запустите Icaros, включите функцию миниатюр, добавьте <span class="blue">;apng;zip;ugoira</span> в конец списка типов файлов или перетащите файлы этих типов в окно Icaros, чтобы добавить их.<br>`,
     ],
     _webmVideo: [
         'WebM 视频',
