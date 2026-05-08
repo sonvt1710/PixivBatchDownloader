@@ -5723,9 +5723,7 @@ class ImageViewer {
         li.addEventListener('click', this.copyWorkLink.bind(this));
     }
     async copyWorkLink() {
-        // 对于简体中文用户，复制的链接里路径使用 /i ，因为 /i 没有被 QQ 屏蔽，而 /artworks 被屏蔽了
-        const path = _Language__WEBPACK_IMPORTED_MODULE_2__.lang.type === 'zh-cn' ? 'i' : 'artworks';
-        const url = `https://www.pixiv.net/${path}/${this.cfg.workId}`;
+        const url = `https://www.pixiv.net/artworks/${this.cfg.workId}`;
         navigator.clipboard.writeText(url);
         _Toast__WEBPACK_IMPORTED_MODULE_4__.toast.success(_Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_已复制作品链接'));
     }
@@ -8912,7 +8910,7 @@ class PreviewWorkDetailInfo {
             this.copyJSON(workData);
         });
         wrap.querySelector('#copyURL').addEventListener('click', () => {
-            const url = `https://www.pixiv.net/i/${workData.body.id}`;
+            const url = `https://www.pixiv.net/artworks/${workData.body.id}`;
             this.copy(url);
         });
         wrap.querySelector('#copyBtn').addEventListener('click', () => {
@@ -42066,7 +42064,7 @@ const formHtml = `
     <span class="optionAnchor" data-for-no="13" aria-hidden="true"></span>
     <div class="option" data-no="13">
       <span class="fileNameRuleLine1">
-        <a href="" target="_blank" class="settingNameStyle" data-xztext="_图像作品的命名规则"></a>
+        <a href="" target="_blank" class="settingNameStyle optionName" data-xztext="_图像作品的命名规则"></a>
 
         <span class="fileNameRuleBtnsArea">
           <slot data-name="saveNamingRuleForArtwork"></slot>
@@ -42090,7 +42088,7 @@ const formHtml = `
     <span class="optionAnchor" data-for-no="106" aria-hidden="true"></span>
     <div class="option" data-no="106">
       <span class="fileNameRuleLine1">
-        <a href="" target="_blank" class="settingNameStyle" data-xztext="_小说的命名规则"></a>
+        <a href="" target="_blank" class="settingNameStyle optionName" data-xztext="_小说的命名规则"></a>
 
         <span class="fileNameRuleBtnsArea">
           <slot data-name="saveNamingRuleForNovel"></slot>
@@ -42334,7 +42332,7 @@ const formHtml = `
         <span class="gray1"> ? </span>
       </a>
       <input type="text" name="timedCrawlInterval" class="setinput_style1 blue" value="30">
-      <span class="settingNameStyle" data-xztext="_分钟"></span>
+      <span class="mr4" data-xztext="_分钟"></span>
     </div>
 
     <span class="optionAnchor" data-for-no="54" aria-hidden="true"></span>
@@ -42350,7 +42348,7 @@ const formHtml = `
         <span>&gt;</span>
         <input type="text" name="autoExportResultNumber" class="setinput_style1 blue" value="1" style="width:30px;min-width: 30px;">
         <span class="verticalSplit"></span>
-        <span class="settingNameStyle" data-xztext="_文件格式"> </span>
+        <span class="mr4" data-xztext="_文件格式"> </span>
         <input type="checkbox" name="autoExportResultCSV" id="autoExportResultCSV" class="need_beautify checkbox_common" checked>
         <span class="beautify_checkbox" tabindex="0"></span>
         <label for="autoExportResultCSV"> CSV </label>
@@ -42757,7 +42755,7 @@ const formHtml = `
 
         <input type="checkbox" name="ugoiraSaveAsUgoira" id="ugoiraSaveAsUgoira" class="need_beautify checkbox_common">
         <span class="beautify_checkbox" tabindex="0"></span>
-        <label for="ugoiraSaveAsZIP" data-xztext="_Ugoira文件"></label>
+        <label for="ugoiraSaveAsUgoira" data-xztext="_Ugoira文件"></label>
 
         <span class="verticalSplit"></span>
         
@@ -42872,7 +42870,7 @@ const formHtml = `
       <span class="beautify_checkbox" tabindex="0"></span>
       <label for="setSaveMetaType3" data-xztext="_小说"></label>
       <span class="verticalSplit"></span>
-      <span class="settingNameStyle" data-xztext="_文件格式"> </span>
+      <span class="mb4" data-xztext="_文件格式"> </span>
       <input type="checkbox" name="saveMetaFormatTXT" id="saveMetaFormatTXT" class="need_beautify checkbox_common" checked>
       <span class="beautify_checkbox" tabindex="0"></span>
       <label for="saveMetaFormatTXT"> TXT </label>

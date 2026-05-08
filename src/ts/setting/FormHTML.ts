@@ -426,7 +426,7 @@ export const formHtml = `
     <span class="optionAnchor" data-for-no="13" aria-hidden="true"></span>
     <div class="option" data-no="13">
       <span class="fileNameRuleLine1">
-        <a href="" target="_blank" class="settingNameStyle" data-xztext="_图像作品的命名规则"></a>
+        <a href="" target="_blank" class="settingNameStyle optionName" data-xztext="_图像作品的命名规则"></a>
 
         <span class="fileNameRuleBtnsArea">
           <slot data-name="saveNamingRuleForArtwork"></slot>
@@ -450,7 +450,7 @@ export const formHtml = `
     <span class="optionAnchor" data-for-no="106" aria-hidden="true"></span>
     <div class="option" data-no="106">
       <span class="fileNameRuleLine1">
-        <a href="" target="_blank" class="settingNameStyle" data-xztext="_小说的命名规则"></a>
+        <a href="" target="_blank" class="settingNameStyle optionName" data-xztext="_小说的命名规则"></a>
 
         <span class="fileNameRuleBtnsArea">
           <slot data-name="saveNamingRuleForNovel"></slot>
@@ -694,7 +694,7 @@ export const formHtml = `
         <span class="gray1"> ? </span>
       </a>
       <input type="text" name="timedCrawlInterval" class="setinput_style1 blue" value="30">
-      <span class="settingNameStyle" data-xztext="_分钟"></span>
+      <span class="mr4" data-xztext="_分钟"></span>
     </div>
 
     <span class="optionAnchor" data-for-no="54" aria-hidden="true"></span>
@@ -710,7 +710,7 @@ export const formHtml = `
         <span>&gt;</span>
         <input type="text" name="autoExportResultNumber" class="setinput_style1 blue" value="1" style="width:30px;min-width: 30px;">
         <span class="verticalSplit"></span>
-        <span class="settingNameStyle" data-xztext="_文件格式"> </span>
+        <span class="mr4" data-xztext="_文件格式"> </span>
         <input type="checkbox" name="autoExportResultCSV" id="autoExportResultCSV" class="need_beautify checkbox_common" checked>
         <span class="beautify_checkbox" tabindex="0"></span>
         <label for="autoExportResultCSV"> CSV </label>
@@ -1117,7 +1117,7 @@ export const formHtml = `
 
         <input type="checkbox" name="ugoiraSaveAsUgoira" id="ugoiraSaveAsUgoira" class="need_beautify checkbox_common">
         <span class="beautify_checkbox" tabindex="0"></span>
-        <label for="ugoiraSaveAsZIP" data-xztext="_Ugoira文件"></label>
+        <label for="ugoiraSaveAsUgoira" data-xztext="_Ugoira文件"></label>
 
         <span class="verticalSplit"></span>
         
@@ -1232,7 +1232,7 @@ export const formHtml = `
       <span class="beautify_checkbox" tabindex="0"></span>
       <label for="setSaveMetaType3" data-xztext="_小说"></label>
       <span class="verticalSplit"></span>
-      <span class="settingNameStyle" data-xztext="_文件格式"> </span>
+      <span class="mb4" data-xztext="_文件格式"> </span>
       <input type="checkbox" name="saveMetaFormatTXT" id="saveMetaFormatTXT" class="need_beautify checkbox_common" checked>
       <span class="beautify_checkbox" tabindex="0"></span>
       <label for="saveMetaFormatTXT"> TXT </label>
