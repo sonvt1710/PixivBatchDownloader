@@ -257,6 +257,8 @@ class Download {
         return
       }
 
+      console.error('Download error:', error)
+
       // 网络错误时 fetch 会抛出 TypeError，此时 status 为 0
       // 储存重试的时间戳等信息
       if (this.retryInterval.length > Config.retryMax) {
@@ -403,7 +405,8 @@ class Download {
           originalSrc: result.original,
           thumbnail: result.ugoiraInfo.originalThumbnail || result.thumb,
         }
-        // 把 animationInfo 写入 animation.json，并添加到 zip 文件里
+        // 把 animationInfo 写入 animation.json，并添加到 zip 文件里、
+
         const zip = await new JSZip().loadAsync(zipFile)
         zip.file('animation.json', JSON.stringify(animationInfo))
         file = await zip.generateAsync({
