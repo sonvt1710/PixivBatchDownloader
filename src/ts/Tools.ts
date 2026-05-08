@@ -912,6 +912,18 @@ class Tools {
     }
   }
 
+  /** 从 zip 压缩包里提取第一张图片，返回 Blob 对象 */
+  static async extractFirstImage(zipFile: ArrayBuffer): Promise<Blob> {
+    const indexList = Tools.getJPGContentIndex(zipFile)
+    if (indexList.length === 0) {
+      throw new Error('No image found in zip file')
+    }
+    const start = indexList[0]
+    const end =
+      indexList.length > 1 ? indexList[1] - 30 - 10 : zipFile.byteLength
+    return new Blob([zipFile.slice(start, end)], { type: 'image/jpeg' })
+  }
+
   /**从 zip 压缩包里提取出图像数据 */
   static async extractImage(
     zipFile: ArrayBuffer,

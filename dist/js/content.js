@@ -3103,9 +3103,9 @@ class ToAPNG {
                 else if (ev.data.result === undefined ||
                     ev.data.result === null ||
                     typeof ev.data.result.byteLength !== 'number') {
+                    // FUCK Firefox
                     // 在 Firefox 里，由于 (ev.data.result instanceof ArrayBuffer) 始终为 false，导致转换无法完成，浪费我的时间来处理
                     // 改为检查 byteLength 属性来判断是否是有效的 ArrayBuffer
-                    // FUCK Firefox
                     console.error('[ToAPNG] invalid worker response:', ev.data);
                     reject(new Error('Invalid APNG worker response'));
                 }
@@ -12436,6 +12436,16 @@ class Tools {
                 return indexList;
             }
         }
+    }
+    /** 从 zip 压缩包里提取第一张图片，返回 Blob 对象 */
+    static async extractFirstImage(zipFile) {
+        const indexList = Tools.getJPGContentIndex(zipFile);
+        if (indexList.length === 0) {
+            throw new Error('No image found in zip file');
+        }
+        const start = indexList[0];
+        const end = indexList.length > 1 ? indexList[1] - 30 - 10 : zipFile.byteLength;
+        return new Blob([zipFile.slice(start, end)], { type: 'image/jpeg' });
     }
     static async extractImage(zipFile, indexList, target) {
         const promises = indexList.map((index, i) => {
@@ -21912,7 +21922,7 @@ class Download {
             else {
                 // 如果这是最后一个待处理的格式
                 // 保存动图的缩略图
-                await this.downloadUgoiraThumbnail(result, newFileName);
+                await this.downloadUgoiraThumbnail(result, newFileName, false, 0, zipFile);
                 // 返回这个 Blob 文件，让后续下载流程继续处理
                 return file;
             }
@@ -22013,61 +22023,77 @@ class Download {
         }
     }
     /** 处理“为动图保存一张缩略图”设置 */
-    async downloadUgoiraThumbnail(result, newFileName, usePng = false, retryCount = 0) {
+    async downloadUgoiraThumbnail(result, newFileName, usePng = false, retryCount = 0, zipFile) {
         if (!_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.saveThumbnailForUgoira || !result.ugoiraInfo) {
             return;
         }
-        let thumbURL = result.ugoiraInfo.originalThumbnail;
-        if (!thumbURL) {
-            // 下载器在之前版本里没有保存 originalThumbnail 字段，此时使用方形缩略图 URL 进行转换
-            // 但是存在一个问题：方形缩略图的扩展名都是 jpg，所以转换后的 URL 也都是 jpg 的
-            // 但 originalThumbnail 有可能是 png，此时使用 jpg 会导致转换后的 URL 错误，下载失败
-            thumbURL = _Tools__WEBPACK_IMPORTED_MODULE_15__.Tools.squareThumbToOriginal(result.thumb);
-        }
-        // 如果该标记为 true，表示之前在请求 jpg 图片时 404 了，现在使用 png 格式再试一次
-        if (usePng) {
-            thumbURL = thumbURL.replace('.jpg', '.png');
-        }
-        // 为 thumbBlob 添加 try catch ，如果状态码是 404 就直接返回它
         let thumbBlob = null;
-        try {
-            const response = await fetch(thumbURL);
-            if (!response.ok) {
-                // 404 状态码有两种可能：
-                // 1. 该作品已不存在
-                // 2. 最大尺寸的缩略图是 png 格式，但从 thumb 里转换后的 URL 是 jpg 结尾，所以请求的 URL 不正确
-                if (response.status === 404 && usePng === false) {
-                    // 对于第二种情况，重试一次。这不占用 retryCount 次数
-                    if (thumbURL.endsWith('.jpg')) {
-                        return this.downloadUgoiraThumbnail(result, newFileName, true, retryCount);
+        // 在 Chrome 浏览器里，使用 fetch 加载缩略图文件
+        if (_Config__WEBPACK_IMPORTED_MODULE_12__.Config.isFirefox === false) {
+            let thumbURL = result.ugoiraInfo.originalThumbnail;
+            if (!thumbURL) {
+                // 下载器在之前版本里没有保存 originalThumbnail 字段，此时使用方形缩略图 URL 进行转换
+                // 但是存在一个问题：方形缩略图的扩展名都是 jpg，所以转换后的 URL 也都是 jpg 的
+                // 但 originalThumbnail 有可能是 png，此时使用 jpg 会导致转换后的 URL 错误，下载失败
+                thumbURL = _Tools__WEBPACK_IMPORTED_MODULE_15__.Tools.squareThumbToOriginal(result.thumb);
+            }
+            // 如果该标记为 true，表示之前在请求 jpg 图片时 404 了，现在使用 png 格式再试一次
+            if (usePng) {
+                thumbURL = thumbURL.replace('.jpg', '.png');
+            }
+            try {
+                const response = await fetch(thumbURL);
+                if (!response.ok) {
+                    // 404 状态码有两种可能：
+                    // 1. 该作品已不存在
+                    // 2. 最大尺寸的缩略图是 png 格式，但从 thumb 里转换后的 URL 是 jpg 结尾，所以请求的 URL 不正确
+                    if (response.status === 404 && usePng === false) {
+                        // 对于第二种情况，重试一次。这不占用 retryCount 次数
+                        if (thumbURL.endsWith('.jpg')) {
+                            return this.downloadUgoiraThumbnail(result, newFileName, true, retryCount);
+                        }
+                    }
+                    else {
+                        // 如果是其他状态码，或者已经重试了因为 jpg 导致的 404 错误，则跳过这个缩略图，不再重试它
+                        _Log__WEBPACK_IMPORTED_MODULE_2__.log.error(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_跳过这个缩略图') +
+                            ': ' +
+                            _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.createLinkHTML(thumbURL) +
+                            '<br>' +
+                            _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_状态码') +
+                            ': ' +
+                            response.status.toString());
+                        return;
                     }
                 }
+                thumbBlob = await response.blob();
+            }
+            catch (error) {
+                // 如果网络请求失败，重试最多 3 次
+                if (retryCount <= 3) {
+                    return this.downloadUgoiraThumbnail(result, newFileName, false, retryCount + 1);
+                }
                 else {
-                    // 如果是其他状态码，或者已经重试了因为 jpg 导致的 404 错误，则跳过这个缩略图，不再重试它
+                    // 如果重试达到最大次数，就不再重试，也不抛出错误，因为这只是下载缩略图失败了，不影响动图文件的下载
                     _Log__WEBPACK_IMPORTED_MODULE_2__.log.error(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_跳过这个缩略图') +
                         ': ' +
-                        _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.createLinkHTML(thumbURL) +
-                        '<br>' +
-                        _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_状态码') +
-                        ': ' +
-                        response.status.toString());
+                        _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.createLinkHTML(thumbURL));
                     return;
                 }
             }
-            thumbBlob = await response.blob();
         }
-        catch (error) {
-            // 如果网络请求失败，重试最多 3 次
-            if (retryCount <= 3) {
-                return this.downloadUgoiraThumbnail(result, newFileName, false, retryCount + 1);
-            }
-            else {
-                // 如果重试达到最大次数，就不再重试，也不抛出错误，因为这只是下载缩略图失败了，不影响动图文件的下载
-                _Log__WEBPACK_IMPORTED_MODULE_2__.log.error(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_跳过这个缩略图') + ': ' + _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.createLinkHTML(thumbURL));
-                return;
+        else {
+            // FUCK Firefox
+            // 在 Firefox 浏览器里，无法使用 fetch 来加载缩略图文件，因为缩略图的域名 i.pximg.net 会触发跨域限制报错。
+            // 我试了多种方法都无法绕过跨域限制，因为 Firefox 浏览器对 CORS 的检查时机更底层、更早，所以扩展程序里所有修改请求头的方法都无效，不管是使用 declarative_net_request_rules.json 还是 webRequest API、不管是在内容脚本还是 SW 里加载这个文件，都无法绕过 CORS 限制。AI 也解决不了
+            // 所以直接从 zip 文件里提取第一张图片来作为缩略图。虽然这张图片的尺寸、体积可能都比最大尺寸的缩略图要小，但总比无法下载缩略图好
+            if (zipFile) {
+                thumbBlob = await _Tools__WEBPACK_IMPORTED_MODULE_15__.Tools.extractFirstImage(await zipFile.arrayBuffer());
             }
         }
         // 下载缩略图
+        if (!thumbBlob) {
+            return;
+        }
         const thumbBlobURL = URL.createObjectURL(thumbBlob);
         const thumbFileName = _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.replaceExtension(newFileName, '.jpg');
         await this.waitPreviousFileDownload();

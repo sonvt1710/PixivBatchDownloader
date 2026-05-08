@@ -87,6 +87,16 @@ https://www.pixiv.net/tags/%E3%81%86%E3%81%94%E3%82%A4%E3%83%A9/artworks?ai_type
 
 在我把 UPNG 放到 worker 里运行之后，在 Firefox 里无法完成转换，又是经典的原因：worker 中的 ArrayBuffer 和主线程的 ArrayBuffer 构造函数是不同的对象，导致 instanceof 检测失败。找出这个问题浪费了一些生命。
 
+### 🖕🦊修复了 Firefox 里，无法下载动图的缩略图的问题
+
+在 Firefox 里，使用 fetch 下载动图的缩略图时出现错误，因为触发了 CORS 限制。网址如：
+
+https://i.pximg.net/img-original/img/2026/02/08/01/44/04/140903398_ugoira0.jpg
+
+我让 AI 尝试了各种方法都无法绕过这个限制，看来 Firefox 真安全呢。又浪费我的时间。
+
+最后的解决办法是不加载这个缩略图，而是从 zip 文件里提取第一张图片作为缩略图。
+
 ### 😊优化了一些帮助信息
 
 我发现很多用户依然搞不懂“为多图作品添加一层文件夹”和“为 R-18(G) 作品添加一层文件夹”怎么用，可能是因为之前的帮助信息写的不够明确易懂，所以我优化了它们的帮助信息。
