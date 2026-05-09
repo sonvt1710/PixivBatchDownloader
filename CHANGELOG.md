@@ -39,11 +39,6 @@ https://www.pixiv.net/tags/%E3%81%86%E3%81%94%E3%82%A4%E3%83%A9/artworks?ai_type
 
 60 个动图生成了 360 个文件，数量正确。文件体积 8 GB。耗时一共 17 分钟，效率挺高的。
 
-比较大的文件有：
-- 45 MB：[144280088](https://www.pixiv.net/artworks/144280088)
-- 39 MB：[144281961](https://www.pixiv.net/artworks/144281961)
-- 25 MB：[144273209](https://www.pixiv.net/artworks/144273209)
-
 ### ⚡降低了转换动图过程中，提取图片数据的时间
 
 `Tools.extractImage()` 方法里会使用 `createImageBitmap(blob)` 把图片从 Blob 对象转换成 ImageBitmap 数据。处理多张图片时，之前是串行的，一张图片转换完成后才会转换下一张图片。现在使用 Promise.all 改为并行，大幅缩短了提取 zip 文件里所有图片数据的时间。
@@ -3839,83 +3834,3 @@ https://github.com/xuejianxianzun/PixivBatchDownloader/issues/296
 因为完整的更新记录已经接近 10000 行了，导致这个 MD 文档体积大，预览速度慢，所以我把 2022 年及更早的更新记录单独保存到了这个文件里：
 
 CHANGELOG-Early.md
-
-## 小说的测试用例
-
-## 下载小说的测试用例
-
-小说里的图片有两种形式，P 站在小说正文里添加有对应的标记。
-1. 上传的图片，标记如 `[uploadedimage:17995414]`，其对应数据保存在 `embeddedImages` 里。
-2. 引用其他作品的图片，标记如 `[pixivimage:99760571-1]`，形式为作品 id 后面跟着图片序号，从 1 开始。但也有可能没有序号。
-
-### 单篇小说
-
-包含 6 个嵌入的图片 `[uploadedimage:17995414]`：
-https://www.pixiv.net/novel/show.php?id=22088160
-
-有 26 张内嵌图片：
-https://www.pixiv.net/novel/show.php?id=21809989
-
-包含 1 个引用的图片 `[pixivimage:70551567]`：
-https://www.pixiv.net/novel/show.php?id=10083001
-
-含有 130 个图片的小说，它的图片全都是引用自同一个插画，从 `[pixivimage:99760571-1]` 一直到 `[pixivimage:99760571-130]`：
-https://www.pixiv.net/novel/show.php?id=17968738
-
-这个小说引用的插画作品已经 404 了，因此不会保存它里面的图片：
-https://www.pixiv.net/novel/show.php?id=13898151#3
-
-没有图片的小说：
-https://www.pixiv.net/novel/show.php?id=21782995
-
-### 系列小说
-
-这个用户有 6 个系列小说，而且小说数量不多，部分小说有插画，适合测试：
-https://www.pixiv.net/users/42533152/novels
-
-这个系列小说里有 9 张图片：
-都是嵌入的 uploadedimage
-《星穹铁道红臀系列》
-https://www.pixiv.net/novel/series/12324638
-
-这个系列小说里一共有 57 张图片，图片总体积 184.8 MB：
-都是嵌入的 uploadedimage
-《御牝馆藏谭：身为冷傲黑长直生徒会长的我在被调教成牝犬后，帮助主人将其他美少女也制作成收藏品》
-https://www.pixiv.net/novel/series/10923616
-
-这个系列目前有 51 篇小说，含有 1299 张图片，其中插画有 1252 张，总体积是 4.46 GB：
-https://www.pixiv.net/novel/series/7708974
-因为文件体积太大，所以需要分割成多个文件。
-如果不分割的话，虽然能全部加载到内存里，但是 jszip.min.js 打包时会因为浏览器的内存限制报错 `Array buffer allocation failed`，无法生成 EPUB 文件。
-
-这个系列的 7 篇小说里有 3 个是好P友限定作品，获取数据会 404:
-https://www.pixiv.net/novel/series/11277272
-
-这个系列小说里目前有 6 篇小说，小说里没有图片：
-它有设定资料，但没有简介：
-https://www.pixiv.net/novel/series/11582804
-
-这个系列小说里目前有 12 篇小说，不带系列封面的话有 130 个图片，其中 12 张是封面图，118 张是小说里的图片，共体积 403.8 MB：
-它有简介但没有设定资料：
-https://www.pixiv.net/novel/series/11600360
-
-这个系列小说里的小说数量比较多（105 篇）：
-https://www.pixiv.net/novel/series/13481803
-
-这个系列小说里有 227 张图片，图片总体积 418 MB：
-第一篇小说里有 2 个嵌入的图片，其他的都是引用的 pixivimage
-第二篇小说里没有图片。
-https://www.pixiv.net/novel/series/1521095
-
-没有图片的系列小说：(星铁捕奴计划)
-https://www.pixiv.net/novel/series/7616746
-
-**含有特殊字符的：**
-
-简介里含有 `&` 符号需要进行处理：
-https://www.pixiv.net/novel/show.php?id=22260000
-
-`&` 符号不能出现在 EPUB 里（至少不能出现在 book.opf 头部类似 `<dc:description>` 等一些标签里），而其转义符号 `&amp;` 包含了 `&` 本身，所以也不能用。最后我只好把它完全换掉，替换成 ` and `。但这样做有个缺点，如果这个 `&` 是网址里的，那么替换成 ` and ` 后这个网址就是错误的了。目前我还不清楚如何完美解决这个问题。
-
-标题里含有 `&` 符号需要进行处理：
-https://www.pixiv.net/novel/show.php?id=21782995

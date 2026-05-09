@@ -21469,7 +21469,7 @@ class CheckWarningMessage {
             this.lastCheckDownloaded = this.downloaded;
             const result = await this.check();
             if (result) {
-                _MsgBox__WEBPACK_IMPORTED_MODULE_3__.msgBox.error(_Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_过度访问警告') + '<br>' + _Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_已暂停'));
+                _MsgBox__WEBPACK_IMPORTED_MODULE_3__.msgBox.error(_Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_过度访问警告') + '<br>' + _Language__WEBPACK_IMPORTED_MODULE_2__.lang.transl('_下载已暂停'));
                 return _EVT__WEBPACK_IMPORTED_MODULE_1__.EVT.fire('requestPauseDownload');
             }
         }
@@ -21935,7 +21935,7 @@ class Download {
             else {
                 // 如果这是最后一个待处理的格式
                 // 保存动图的缩略图
-                await this.downloadUgoiraThumbnail(result, newFileName, false, 0, zipFile);
+                await this.downloadUgoiraThumbnail(result, newFileName, zipFile);
                 // 返回这个 Blob 文件，让后续下载流程继续处理
                 return file;
             }
@@ -22036,70 +22036,53 @@ class Download {
         }
     }
     /** 处理“为动图保存一张缩略图”设置 */
-    async downloadUgoiraThumbnail(result, newFileName, usePng = false, retryCount = 0, zipFile) {
+    async downloadUgoiraThumbnail(result, newFileName, zipFile, retryCount = 0) {
         if (!_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.saveThumbnailForUgoira || !result.ugoiraInfo) {
             return;
         }
         let thumbBlob = null;
-        if (_Config__WEBPACK_IMPORTED_MODULE_12__.Config.isFirefox) {
+        let thumbURL = result.ugoiraInfo.originalThumbnail || '';
+        // 如果缩略图不是 jpg 或 png 文件，就清空 thumbURL，这样接下来会从 zip 文件里提取缩略图
+        // 并且在设置缩略图文件的扩展名时不会被不符合条件的扩展名干扰
+        if (!thumbURL.endsWith('jpg') && !thumbURL.endsWith('png')) {
+        }
+        // 这些情况不加载缩略图文件，而是从 zip 文件里提取第一张图片来作为缩略图：
+        // 1. 在 Firefox 浏览器里，无法使用 fetch 来加载缩略图文件（会触发跨域限制）
+        // 2. 没有缩略图 URL 的情况。下载器之前版本的 ugoiraInfo 里没有 originalThumbnail 字段
+        // 3. 缩略图不是 jpg 或 png 的情况。例如这个作品的缩略图是 gif 格式的静态图片：
+        // https://www.pixiv.net/artworks/144539571
+        // 下载器可以把动图转换为 GIF 图片，扩展名是 .gif。如果缩略图也是 gif 文件，就会和转换后的动态 GIF 文件重名，导致覆盖了动态 GIF 文件。此时从 zip 文件里提取第一张图片来作为缩略图，就可以避免这个问题
+        if (_Config__WEBPACK_IMPORTED_MODULE_12__.Config.isFirefox ||
+            !thumbURL ||
+            (!thumbURL.endsWith('jpg') && !thumbURL.endsWith('png'))) {
+            // 重置 thumbURL，这样在设置缩略图文件的扩展名时不会使用 thumbURL 里的扩展名
+            thumbURL = '';
             // FUCK Firefox
             // 在 Firefox 浏览器里，无法使用 fetch 来加载缩略图文件，因为缩略图的域名 i.pximg.net 会触发跨域限制
             // 我试了多种方法都无法绕过跨域限制，因为 Firefox 浏览器对 CORS 的检查时机更底层、更早，所以扩展程序里所有修改请求头的方法都无效，不管是使用 declarative_net_request_rules.json 还是 webRequest API、不管是在内容脚本还是 SW 里加载这个文件，都无法绕过 CORS 限制。AI 也解决不了
             // 现在直接从 zip 文件里提取第一张图片来作为缩略图。虽然这张图片的尺寸、体积可能都比最大尺寸的缩略图要小，但总比无法下载缩略图好
-            if (zipFile) {
-                thumbBlob = await _Tools__WEBPACK_IMPORTED_MODULE_15__.Tools.extractFirstImage(await zipFile.arrayBuffer());
-            }
+            thumbBlob = await _Tools__WEBPACK_IMPORTED_MODULE_15__.Tools.extractFirstImage(await zipFile.arrayBuffer());
         }
         else {
-            // 在 Chrome 浏览器里，使用 fetch 加载缩略图文件
-            let thumbURL = result.ugoiraInfo.originalThumbnail;
-            if (!thumbURL) {
-                // 下载器在之前版本里没有保存 originalThumbnail 字段，此时使用方形缩略图 URL 进行转换
-                // 但是存在一个问题：方形缩略图的扩展名都是 jpg，所以转换后的 URL 也都是 jpg 的
-                // 但 originalThumbnail 有可能是 png，此时使用 jpg 会导致转换后的 URL 错误，下载失败
-                thumbURL = _Tools__WEBPACK_IMPORTED_MODULE_15__.Tools.squareThumbToOriginal(result.thumb);
-            }
-            // 如果该标记为 true，表示之前在请求 jpg 图片时 404 了，现在使用 png 格式再试一次
-            if (usePng) {
-                thumbURL = thumbURL.replace('.jpg', '.png');
-            }
+            // 其他情况，使用 fetch 加载缩略图文件
             try {
                 const response = await fetch(thumbURL);
                 if (!response.ok) {
-                    // 404 状态码有两种可能：
-                    // 1. 该作品已不存在
-                    // 2. 最大尺寸的缩略图是 png 格式，但从 thumb 里转换后的 URL 是 jpg 结尾，所以请求的 URL 不正确
-                    if (response.status === 404 && usePng === false) {
-                        // 对于第二种情况，重试一次。这不占用 retryCount 次数
-                        if (thumbURL.endsWith('.jpg')) {
-                            return this.downloadUgoiraThumbnail(result, newFileName, true, retryCount);
-                        }
-                    }
-                    else {
-                        // 如果是其他状态码，或者已经重试了因为 jpg 导致的 404 错误，则跳过这个缩略图，不再重试它
-                        _Log__WEBPACK_IMPORTED_MODULE_2__.log.error(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_跳过这个缩略图') +
-                            ': ' +
-                            _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.createLinkHTML(thumbURL) +
-                            '<br>' +
-                            _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_状态码') +
-                            ': ' +
-                            response.status.toString());
-                        return;
-                    }
+                    // 如果请求成功但是状态码错误，就从 zip 文件里提取第一张图片来作为缩略图
+                    thumbBlob = await _Tools__WEBPACK_IMPORTED_MODULE_15__.Tools.extractFirstImage(await zipFile.arrayBuffer());
                 }
-                thumbBlob = await response.blob();
+                else {
+                    thumbBlob = await response.blob();
+                }
             }
             catch (error) {
                 // 如果网络请求失败，重试最多 3 次
                 if (retryCount <= 3) {
-                    return this.downloadUgoiraThumbnail(result, newFileName, false, retryCount + 1);
+                    return this.downloadUgoiraThumbnail(result, newFileName, zipFile, retryCount + 1);
                 }
                 else {
-                    // 如果重试达到最大次数，就不再重试，也不抛出错误，因为这只是下载缩略图失败了，不影响动图文件的下载
-                    _Log__WEBPACK_IMPORTED_MODULE_2__.log.error(_Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_跳过这个缩略图') +
-                        ': ' +
-                        _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.createLinkHTML(thumbURL));
-                    return;
+                    // 如果重试达到最大次数，就不再重试，而是直接从 zip 文件里提取第一张图片来作为缩略图
+                    thumbBlob = await _Tools__WEBPACK_IMPORTED_MODULE_15__.Tools.extractFirstImage(await zipFile.arrayBuffer());
                 }
             }
         }
@@ -22108,7 +22091,7 @@ class Download {
             return;
         }
         const thumbBlobURL = URL.createObjectURL(thumbBlob);
-        const thumbFileName = _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.replaceExtension(newFileName, '.jpg');
+        const thumbFileName = _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.replaceExtension(newFileName, thumbURL || '.jpg');
         await this.waitPreviousFileDownload();
         this.sendDownload(thumbBlob, thumbBlobURL, thumbFileName, result.id, -1, false);
         setTimeout(() => {
@@ -22541,7 +22524,7 @@ class DownloadControl {
             // 如果正在下载中
             if (_store_States__WEBPACK_IMPORTED_MODULE_16__.states.busy) {
                 this.pause = true;
-                _Log__WEBPACK_IMPORTED_MODULE_4__.log.warning('⏸️' + _Language__WEBPACK_IMPORTED_MODULE_5__.lang.transl('_已暂停'));
+                _Log__WEBPACK_IMPORTED_MODULE_4__.log.warning('⏸️' + _Language__WEBPACK_IMPORTED_MODULE_5__.lang.transl('_下载已暂停'));
                 // 输出空字符串，起到占据一个空行的效果，使得日志看起来更清晰
                 _Log__WEBPACK_IMPORTED_MODULE_4__.log.log('');
                 _EVT__WEBPACK_IMPORTED_MODULE_1__.EVT.fire('downloadPause');
@@ -22558,7 +22541,7 @@ class DownloadControl {
             return;
         }
         this.stop = true;
-        _Log__WEBPACK_IMPORTED_MODULE_4__.log.error('🛑' + _Language__WEBPACK_IMPORTED_MODULE_5__.lang.transl('_已停止'));
+        _Log__WEBPACK_IMPORTED_MODULE_4__.log.error('🛑' + _Language__WEBPACK_IMPORTED_MODULE_5__.lang.transl('_下载已停止'));
         // 输出空字符串，起到占据一个空行的效果，使得日志看起来更清晰
         _Log__WEBPACK_IMPORTED_MODULE_4__.log.log('');
         this.pause = false;
@@ -22693,6 +22676,7 @@ class DownloadControl {
             this.downloaded + this.errorIdList.length === _store_Store__WEBPACK_IMPORTED_MODULE_3__.store.result.length) {
             // 进入暂停状态，等待一段时间后自动开始下载，重试下载出错的文件
             this.pauseDownload();
+            _Log__WEBPACK_IMPORTED_MODULE_4__.log.log(_Language__WEBPACK_IMPORTED_MODULE_5__.lang.transl('_稍后会重试下载失败的文件'));
             await _utils_Utils__WEBPACK_IMPORTED_MODULE_19__.Utils.sleep(2000);
             this.startDownload();
         }
@@ -26266,10 +26250,10 @@ class ShowDownloadStates {
             this.setText('_正在下载中');
         });
         window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_1__.EVT.list.downloadPause, () => {
-            this.setText('_已暂停', _Colors__WEBPACK_IMPORTED_MODULE_0__.Colors.textWarning);
+            this.setText('_下载已暂停', _Colors__WEBPACK_IMPORTED_MODULE_0__.Colors.textWarning);
         });
         window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_1__.EVT.list.downloadStop, () => {
-            this.setText('_已停止', _Colors__WEBPACK_IMPORTED_MODULE_0__.Colors.textError);
+            this.setText('_下载已停止', _Colors__WEBPACK_IMPORTED_MODULE_0__.Colors.textError);
         });
         window.addEventListener(_EVT__WEBPACK_IMPORTED_MODULE_1__.EVT.list.downloadComplete, () => {
             this.setText('_下载完毕', _Colors__WEBPACK_IMPORTED_MODULE_0__.Colors.textSuccess);
@@ -31068,7 +31052,7 @@ So the file name set by the Downloader is lost, and the file name becomes the la
         '다운로드 완료',
         'Загрузка завершена',
     ],
-    _已暂停: [
+    _下载已暂停: [
         '下载已暂停',
         '下載已暫停',
         'Download is paused',
@@ -31076,7 +31060,7 @@ So the file name set by the Downloader is lost, and the file name becomes the la
         '다운로드 일시중지',
         'Загрузка приостановлена',
     ],
-    _已停止: [
+    _下载已停止: [
         '下载已停止',
         '下載已停止',
         'Download stopped',
@@ -31091,6 +31075,14 @@ So the file name set by the Downloader is lost, and the file name becomes the la
         'downloaded',
         '다운로드됨',
         'загруженно',
+    ],
+    _稍后会重试下载失败的文件: [
+        `稍后会重试下载失败的文件`,
+        `稍後會重試下載失敗的檔案`,
+        `Failed files will be retried later`,
+        `ダウンロードに失敗したファイルは後で再試行されます`,
+        `다운로드에 실패한 파일은 나중에 다시 시도합니다`,
+        `Неудачно загруженные файлы будут повторно загружены позже`,
     ],
     _抓取完毕: [
         '抓取完毕！',

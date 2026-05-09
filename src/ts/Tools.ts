@@ -956,6 +956,7 @@ class Tools {
         end = zipFile.byteLength
       }
 
+      // 动图 zip 文件里的图片都是 jpg 格式。在用户投稿动图时，不管上传的图片是 jpg 还是 png，都会被 Pixiv 转换，生成新的 jpg 图片保存到 zip 文件里。只不过 Pixiv 转换图片时压缩等级比较高，所以有时候转换后的 jpg 图片体积比原图还大。
       const blob = new Blob([zipFile.slice(start, end)], {
         type: 'image/jpeg',
       })
