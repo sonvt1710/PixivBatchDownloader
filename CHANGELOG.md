@@ -83,11 +83,11 @@ https://www.pixiv.net/tags/%E3%81%86%E3%81%94%E3%82%A4%E3%83%A9/artworks?ai_type
 
 现在把 UPNG.js 放到 worker 里了，不会再阻塞主线程了。
 
-### 🖕🦊修复了 Firefox 里，转换 APNG 图片失败的问题
+### 🖕🦊修复了在 Firefox 里，转换 APNG 图片失败的问题
 
-在我把 UPNG 放到 worker 里运行之后，在 Firefox 里无法完成转换，又是经典的原因：worker 中的 ArrayBuffer 和主线程的 ArrayBuffer 构造函数是不同的对象，导致 instanceof 检测失败。找出这个问题浪费了一些生命。
+我把 UPNG 放到 worker 里运行之后，在 Firefox 里无法完成转换，又是经典的原因：worker 中的 ArrayBuffer 和主线程的 ArrayBuffer 构造函数是不同的对象，导致 instanceof 检测失败。解决这个兼容性问题浪费了一些生命。
 
-### 🖕🦊修复了 Firefox 里，无法下载动图的缩略图的问题
+### 🖕🦊修复了在 Firefox 里，无法下载动图的缩略图的问题
 
 在 Firefox 里，使用 fetch 下载动图的缩略图时出现错误，因为触发了 CORS 限制。网址如：
 
@@ -96,6 +96,14 @@ https://i.pximg.net/img-original/img/2026/02/08/01/44/04/140903398_ugoira0.jpg
 我让 AI 尝试了各种方法都无法绕过这个限制，看来 Firefox 真安全呢。又浪费我的时间。
 
 最后的解决办法是不加载这个缩略图，而是从 zip 文件里提取第一张图片作为缩略图。
+
+### 🖕🦊修复了在 Firefox 里，无法读取已存在的 ZIP 文件的问题
+
+在 Firefox 里我使用 `JSZip().loadAsync(blob)` 加载一个 ZIP 文件的 Blob 对象时会报错（我需要向这个 ZIP 文件里添加一个新的文件）。
+
+解决这个错误后还有新的错误，浪费了很长时间。让 AI 反复调整、并且我进行测试、反馈、让 AI 再调整，但问题依然无法解决。最后抄了一段代码解决了这个问题，但是在 Firefox 这会带来额外的性能开销。
+
+详细情况可以在 `src\ts\download\Download.ts` 里搜索 `FUCK Firefox` 了解。
 
 ### 😊优化了一些帮助信息
 

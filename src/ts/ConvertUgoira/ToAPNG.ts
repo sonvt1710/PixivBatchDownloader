@@ -102,12 +102,12 @@ class ToAPNG {
           ev.data.result === null ||
           typeof ev.data.result.byteLength !== 'number'
         ) {
-          // FUCK Firefox
-          // 在 Firefox 里，由于 (ev.data.result instanceof ArrayBuffer) 始终为 false，导致转换无法完成，浪费我的时间来处理
-          // 改为检查 byteLength 属性来判断是否是有效的 ArrayBuffer
           console.error('[ToAPNG] invalid worker response:', ev.data)
           reject(new Error('Invalid APNG worker response'))
         } else {
+          // FUCK Firefox
+          // 在 Firefox 里，由于 worker 里编码后产生的 ArrayBuffer 数据与主线程的 ArrayBuffer 构造函数是不同的对象，导致 instanceof 检测失败始终为 false（跨 realm 问题），所以转换无法完成
+          // 现在改为检查 byteLength 属性来判断是否是有效的 ArrayBuffer
           resolve(ev.data.result)
         }
       }

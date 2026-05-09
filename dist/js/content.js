@@ -3103,13 +3103,13 @@ class ToAPNG {
                 else if (ev.data.result === undefined ||
                     ev.data.result === null ||
                     typeof ev.data.result.byteLength !== 'number') {
-                    // FUCK Firefox
-                    // 在 Firefox 里，由于 (ev.data.result instanceof ArrayBuffer) 始终为 false，导致转换无法完成，浪费我的时间来处理
-                    // 改为检查 byteLength 属性来判断是否是有效的 ArrayBuffer
                     console.error('[ToAPNG] invalid worker response:', ev.data);
                     reject(new Error('Invalid APNG worker response'));
                 }
                 else {
+                    // FUCK Firefox
+                    // 在 Firefox 里，由于 worker 里编码后产生的 ArrayBuffer 数据与主线程的 ArrayBuffer 构造函数是不同的对象，导致 instanceof 检测失败始终为 false（跨 realm 问题），所以转换无法完成
+                    // 现在改为检查 byteLength 属性来判断是否是有效的 ArrayBuffer
                     resolve(ev.data.result);
                 }
             };
@@ -21874,8 +21874,21 @@ class Download {
                     originalSrc: result.original,
                     thumbnail: result.ugoiraInfo.originalThumbnail || result.thumb,
                 };
-                // 把 animationInfo 写入 animation.json，并添加到 zip 文件里、
-                const zip = await new JSZip().loadAsync(zipFile);
+                // FUCK Firefox
+                // 在 Firefox 里使用 JSZip().loadAsync(blob) 加载一个 ZIP 文件时会报错：
+                // Error: Can't read the data of 'the loaded zip file'. Is it in a supported JavaScript type (String, Blob, ArrayBuffer, etc) ?
+                // 这个错误是由跨 realm 问题引起的。解决这个错误之后，又会产生新的错误：
+                // Error: Permission denied to access property "constructor"
+                // AI 反复尝试也无法解决这个问题。最后我从 GitHub 上抄了一个办法解决了这个问题：
+                // https://github.com/Stuk/jszip/issues/759#issuecomment-932896399
+                // 使用了弃用的 FileReader.readAsBinaryString 方法把 ZIP 文件读取为二进制数据再使用
+                // 这个问题浪费了我很多时间。虽然现在解决了，但是在 Firefox 里会多出一些性能开销
+                let zipData = zipFile;
+                if (_Config__WEBPACK_IMPORTED_MODULE_12__.Config.isFirefox) {
+                    zipData = (await _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.readAsBinaryString(zipFile));
+                }
+                // 把 animationInfo 写入 animation.json，并添加到 zip 文件里
+                const zip = await new JSZip().loadAsync(zipData);
                 zip.file('animation.json', JSON.stringify(animationInfo));
                 file = await zip.generateAsync({
                     type: 'blob',
@@ -22028,8 +22041,17 @@ class Download {
             return;
         }
         let thumbBlob = null;
-        // 在 Chrome 浏览器里，使用 fetch 加载缩略图文件
-        if (_Config__WEBPACK_IMPORTED_MODULE_12__.Config.isFirefox === false) {
+        if (_Config__WEBPACK_IMPORTED_MODULE_12__.Config.isFirefox) {
+            // FUCK Firefox
+            // 在 Firefox 浏览器里，无法使用 fetch 来加载缩略图文件，因为缩略图的域名 i.pximg.net 会触发跨域限制
+            // 我试了多种方法都无法绕过跨域限制，因为 Firefox 浏览器对 CORS 的检查时机更底层、更早，所以扩展程序里所有修改请求头的方法都无效，不管是使用 declarative_net_request_rules.json 还是 webRequest API、不管是在内容脚本还是 SW 里加载这个文件，都无法绕过 CORS 限制。AI 也解决不了
+            // 现在直接从 zip 文件里提取第一张图片来作为缩略图。虽然这张图片的尺寸、体积可能都比最大尺寸的缩略图要小，但总比无法下载缩略图好
+            if (zipFile) {
+                thumbBlob = await _Tools__WEBPACK_IMPORTED_MODULE_15__.Tools.extractFirstImage(await zipFile.arrayBuffer());
+            }
+        }
+        else {
+            // 在 Chrome 浏览器里，使用 fetch 加载缩略图文件
             let thumbURL = result.ugoiraInfo.originalThumbnail;
             if (!thumbURL) {
                 // 下载器在之前版本里没有保存 originalThumbnail 字段，此时使用方形缩略图 URL 进行转换
@@ -22079,15 +22101,6 @@ class Download {
                         _utils_Utils__WEBPACK_IMPORTED_MODULE_11__.Utils.createLinkHTML(thumbURL));
                     return;
                 }
-            }
-        }
-        else {
-            // FUCK Firefox
-            // 在 Firefox 浏览器里，无法使用 fetch 来加载缩略图文件，因为缩略图的域名 i.pximg.net 会触发跨域限制报错。
-            // 我试了多种方法都无法绕过跨域限制，因为 Firefox 浏览器对 CORS 的检查时机更底层、更早，所以扩展程序里所有修改请求头的方法都无效，不管是使用 declarative_net_request_rules.json 还是 webRequest API、不管是在内容脚本还是 SW 里加载这个文件，都无法绕过 CORS 限制。AI 也解决不了
-            // 所以直接从 zip 文件里提取第一张图片来作为缩略图。虽然这张图片的尺寸、体积可能都比最大尺寸的缩略图要小，但总比无法下载缩略图好
-            if (zipFile) {
-                thumbBlob = await _Tools__WEBPACK_IMPORTED_MODULE_15__.Tools.extractFirstImage(await zipFile.arrayBuffer());
             }
         }
         // 下载缩略图
@@ -66184,6 +66197,15 @@ class Utils {
                 reject(new Error('Failed to convert blob to DataURL'));
             };
             reader.readAsDataURL(blob);
+        });
+    }
+    static readAsBinaryString(blob) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                resolve(event.target.result);
+            };
+            reader.readAsBinaryString(blob);
         });
     }
     static async writeClipboardText(text) {

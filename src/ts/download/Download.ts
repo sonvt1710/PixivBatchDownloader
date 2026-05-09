@@ -405,9 +405,23 @@ class Download {
           originalSrc: result.original,
           thumbnail: result.ugoiraInfo.originalThumbnail || result.thumb,
         }
-        // 把 animationInfo 写入 animation.json，并添加到 zip 文件里、
 
-        const zip = await new JSZip().loadAsync(zipFile)
+        // FUCK Firefox
+        // 在 Firefox 里使用 JSZip().loadAsync(blob) 加载一个 ZIP 文件时会报错：
+        // Error: Can't read the data of 'the loaded zip file'. Is it in a supported JavaScript type (String, Blob, ArrayBuffer, etc) ?
+        // 这个错误是由跨 realm 问题引起的。解决这个错误之后，又会产生新的错误：
+        // Error: Permission denied to access property "constructor"
+        // AI 反复尝试也无法解决这个问题。最后我从 GitHub 上抄了一个办法解决了这个问题：
+        // https://github.com/Stuk/jszip/issues/759#issuecomment-932896399
+        // 使用了弃用的 FileReader.readAsBinaryString 方法把 ZIP 文件读取为二进制数据再使用
+        // 这个问题浪费了我很多时间。虽然现在解决了，但是在 Firefox 里会多出一些性能开销
+        let zipData = zipFile
+        if (Config.isFirefox) {
+          zipData = (await Utils.readAsBinaryString(zipFile)) as any
+        }
+
+        // 把 animationInfo 写入 animation.json，并添加到 zip 文件里
+        const zip = await new JSZip().loadAsync(zipData)
         zip.file('animation.json', JSON.stringify(animationInfo))
         file = await zip.generateAsync({
           type: 'blob',
@@ -613,8 +627,16 @@ class Download {
 
     let thumbBlob: Blob | null = null
 
-    // 在 Chrome 浏览器里，使用 fetch 加载缩略图文件
-    if (Config.isFirefox === false) {
+    if (Config.isFirefox) {
+      // FUCK Firefox
+      // 在 Firefox 浏览器里，无法使用 fetch 来加载缩略图文件，因为缩略图的域名 i.pximg.net 会触发跨域限制
+      // 我试了多种方法都无法绕过跨域限制，因为 Firefox 浏览器对 CORS 的检查时机更底层、更早，所以扩展程序里所有修改请求头的方法都无效，不管是使用 declarative_net_request_rules.json 还是 webRequest API、不管是在内容脚本还是 SW 里加载这个文件，都无法绕过 CORS 限制。AI 也解决不了
+      // 现在直接从 zip 文件里提取第一张图片来作为缩略图。虽然这张图片的尺寸、体积可能都比最大尺寸的缩略图要小，但总比无法下载缩略图好
+      if (zipFile) {
+        thumbBlob = await Tools.extractFirstImage(await zipFile.arrayBuffer())
+      }
+    } else {
+      // 在 Chrome 浏览器里，使用 fetch 加载缩略图文件
       let thumbURL = result.ugoiraInfo.originalThumbnail
       if (!thumbURL) {
         // 下载器在之前版本里没有保存 originalThumbnail 字段，此时使用方形缩略图 URL 进行转换
@@ -677,14 +699,6 @@ class Download {
           )
           return
         }
-      }
-    } else {
-      // FUCK Firefox
-      // 在 Firefox 浏览器里，无法使用 fetch 来加载缩略图文件，因为缩略图的域名 i.pximg.net 会触发跨域限制报错。
-      // 我试了多种方法都无法绕过跨域限制，因为 Firefox 浏览器对 CORS 的检查时机更底层、更早，所以扩展程序里所有修改请求头的方法都无效，不管是使用 declarative_net_request_rules.json 还是 webRequest API、不管是在内容脚本还是 SW 里加载这个文件，都无法绕过 CORS 限制。AI 也解决不了
-      // 所以直接从 zip 文件里提取第一张图片来作为缩略图。虽然这张图片的尺寸、体积可能都比最大尺寸的缩略图要小，但总比无法下载缩略图好
-      if (zipFile) {
-        thumbBlob = await Tools.extractFirstImage(await zipFile.arrayBuffer())
       }
     }
 

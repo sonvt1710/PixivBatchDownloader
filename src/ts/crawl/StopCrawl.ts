@@ -53,7 +53,7 @@ class StopCrawl {
   }
 
   private log() {
-    const msg = lang.transl('_已停止抓取')
+    const msg = lang.transl('_下载已停止抓取')
     log.error('🛑' + msg)
     toast.error(msg)
   }
