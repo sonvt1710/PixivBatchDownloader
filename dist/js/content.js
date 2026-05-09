@@ -2922,18 +2922,28 @@ class ConvertUgoira {
                 this.convertingIds.add(id);
                 window.clearTimeout(this.clearCacheTimers.get(id));
                 const imageBitmapList = await this.getImageBitmapList(file, id);
-                if (type === 'gif') {
-                    return _ToGIF__WEBPACK_IMPORTED_MODULE_4__.toGIF.convert(imageBitmapList, info, file.size);
+                try {
+                    // await Utils.sleep(1000)
+                    // console.count('测试转换错误')
+                    // throw new Error('测试转换错误')
+                    // 为了在这里统一捕获所有格式在转换时的错误，必须使用 await 等待转换过程
+                    if (type === 'gif') {
+                        return await _ToGIF__WEBPACK_IMPORTED_MODULE_4__.toGIF.convert(imageBitmapList, info, file.size);
+                    }
+                    else if (type === 'png') {
+                        return await _ToAPNG__WEBPACK_IMPORTED_MODULE_5__.toAPNG.convert(imageBitmapList, info);
+                    }
+                    else if (type === 'webp') {
+                        return await _ToWebP__WEBPACK_IMPORTED_MODULE_3__.toWebP.convert(imageBitmapList, info);
+                    }
+                    else {
+                        return await _ToWebM__WEBPACK_IMPORTED_MODULE_2__.toWebM.convert(imageBitmapList, info);
+                    }
                 }
-                else if (type === 'png') {
-                    return _ToAPNG__WEBPACK_IMPORTED_MODULE_5__.toAPNG.convert(imageBitmapList, info);
-                }
-                else if (type === 'webp') {
-                    return _ToWebP__WEBPACK_IMPORTED_MODULE_3__.toWebP.convert(imageBitmapList, info);
-                }
-                else {
-                    // 默认使用 webm 格式
-                    return _ToWebM__WEBPACK_IMPORTED_MODULE_2__.toWebM.convert(imageBitmapList, info);
+                catch (error) {
+                    // 转换出错时把计数 -1，否则这个错误会一直占据一个转换配额，并且在下载完成后重试出错的文件时，这个计数也依然会被占用
+                    this.count = this._count - 1;
+                    throw error;
                 }
             }
         }
@@ -12461,6 +12471,7 @@ class Tools {
                 // 这导致它会包含 zip 的目录数据，但是不会影响图片的显示
                 end = zipFile.byteLength;
             }
+            // 动图 zip 文件里的图片都是 jpg 格式。在用户投稿动图时，不管上传的图片是 jpg 还是 png，都会被 Pixiv 转换，生成新的 jpg 图片保存到 zip 文件里。只不过 Pixiv 转换图片时压缩等级比较高，所以有时候转换后的 jpg 图片体积比原图还大。
             const blob = new Blob([zipFile.slice(start, end)], {
                 type: 'image/jpeg',
             });
@@ -21910,6 +21921,7 @@ class Download {
                         _Language__WEBPACK_IMPORTED_MODULE_3__.lang.transl('_下载器会暂时跳过它');
                     _Log__WEBPACK_IMPORTED_MODULE_2__.log.error(msg);
                     this.error = true;
+                    // 转换动图出错时，只要出错 1 次就会暂时跳过它，等下载完其他文件再重试它
                     _EVT__WEBPACK_IMPORTED_MODULE_1__.EVT.fire('downloadError', result.id);
                     file = null;
                 }

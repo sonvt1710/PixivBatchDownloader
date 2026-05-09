@@ -450,6 +450,7 @@ class Download {
             lang.transl('_下载器会暂时跳过它')
           log.error(msg)
           this.error = true
+          // 转换动图出错时，只要出错 1 次就会暂时跳过它，等下载完其他文件再重试它
           EVT.fire('downloadError', result.id)
           file = null
         }
