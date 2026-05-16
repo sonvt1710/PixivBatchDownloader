@@ -47101,10 +47101,14 @@ class CacheWorkData {
         }
         this.pendingIds.add(id);
         const func = type === 'artwork' ? 'getArtworkData' : 'getNovelData';
-        const data = await _API__WEBPACK_IMPORTED_MODULE_0__.API[func](id, unlisted);
-        this.set(data);
-        this.pendingIds.delete(id);
-        return data;
+        try {
+            const data = await _API__WEBPACK_IMPORTED_MODULE_0__.API[func](id, unlisted);
+            this.set(data);
+            return data;
+        }
+        finally {
+            this.pendingIds.delete(id);
+        }
     }
     has(id) {
         return this.cache.some((val) => val.body.id === id);
