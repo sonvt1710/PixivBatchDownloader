@@ -328,7 +328,7 @@ class Download {
     }
 
     // 其他状态码，暂时跳过这个任务，但最后还是会尝试重新下载它
-    log.log(lang.transl('_下载器会暂时跳过它'))
+    log.log(lang.transl('_下载器会暂时跳过它并在其他文件下载完毕后重试下载它'))
     this.error = true
     EVT.fire('downloadError', fileId)
   }
@@ -451,7 +451,11 @@ class Download {
               Tools.createWorkLink(result.idNum)
             ) +
             '<br>' +
-            lang.transl('_下载器会暂时跳过它')
+            lang.transl('_格式') +
+            ': ' +
+            format +
+            '<br>' +
+            lang.transl('_下载器会暂时跳过它并在其他文件下载完毕后重试下载它')
           log.error(msg)
           this.error = true
           // 转换动图出错时，只要出错 1 次就会暂时跳过它，等下载完其他文件再重试它

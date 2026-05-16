@@ -5364,7 +5364,7 @@ Naming rule when merging a novel series" in "More"-"Naming".`,
     '다운로더는 그것을 다시 다운로드하지 않습니다. 필요하다면 나중에 이 작품을 개별적으로 다운로드할 수 있습니다.',
     'Загрузчик не будет пытаться скачать его снова. При необходимости вы можете попробовать скачать эту работу отдельно позже.',
   ],
-  _下载器会暂时跳过它: [
+  _下载器会暂时跳过它并在其他文件下载完毕后重试下载它: [
     '下载器会暂时跳过它，并在其他文件下载完毕后重试下载它。',
     '下載器會暫時跳過它，並在其他檔案下載完畢後重試下載它。',
     'The downloader will temporarily skip it and retry downloading it after other files are downloaded.',
@@ -9390,73 +9390,13 @@ Additionally, if you have enabled "Create folder using the first matching tag", 
     `파일 이름에 적용되는 {tags} 계열 토큰`,
     `Токены серии {tags}, применяемые в имени файла`,
   ],
-  _版本更新说明18_9_0: [
-    `<strong>⚠️🔧调整了“不创建文件夹”设置的子选项</strong><br>
-该设置的子选项已经重新设计，以提供更细致的控制能力。如果你使用这个设置，需要重新选择你需要的选项。<br>
-<br>
-<strong>✨调整了动图保存格式</strong><br>
-- 新增格式：WebP 图片（有损）、WebP 图片（无损）、Ugoira 文件<br>
-- 多选：之前你只能选择一种格式，现在可以选择多种格式，在一次下载里把动图保存为多种格式。<br>
-- 默认值变化：之前的默认格式是 WebM 视频，现在改为 WebP 图片。这不会改变你之前选择的格式，只会影响下载器的新用户。<br>
-- 略微加快了转换速度。<br>
-- 转换 APNG 图片时不会再冻结页面。<br>
-<br>
-<strong>😊优化了一些帮助信息</strong><br>`,
-    `<strong>⚠️🔧調整了 "不建立資料夾" 設定的子選項</strong><br>
-這個設定的子選項已重新設計，以提供更細緻的控制能力。如果你有使用這個設定，需要重新選擇你需要的選項。<br>
-<br>
-<strong>✨調整了動圖儲存格式</strong><br>
-- 新增格式：WebP 圖片（有損）、WebP 圖片（無損）、Ugoira 檔案<br>
-- 多選：以前你只能選擇一種格式，現在可以同時選擇多種格式，在一次下載裡把動圖儲存成多種格式。<br>
-- 預設值變更：以前的預設格式是 WebM 影片，現在改成 WebP 圖片。這不會改變你之前選擇的格式，只會影響下載器的新使用者。<br>
-- 稍微加快了轉換速度。<br>
-- 轉換 APNG 圖片時不會再讓頁面凍結。<br>
-<br>
-<strong>😊優化了一些幫助資訊</strong><br>`,
-    `<strong>⚠️🔧Adjusted the sub-options of the "Do not create folders" setting</strong><br>
-The sub-options of this setting have been redesigned to provide more detailed control. If you use this setting, you need to select the options you want again.<br>
-<br>
-<strong>✨Adjusted the Ugoira save formats</strong><br>
-- New formats: WebP image (lossy), WebP image (lossless), Ugoira file<br>
-- Multi-select: Previously, you could choose only one format. Now you can choose multiple formats and save Ugoira in multiple formats in a single download.<br>
-- Default value changed: The previous default format was WebM video, and now it has been changed to WebP image. This will not change the format you selected before. It only affects new users of the downloader.<br>
-- Conversion speed has been slightly improved.<br>
-- Converting APNG images will no longer freeze the page.<br>
-<br>
-<strong>😊Improved some help information</strong><br>`,
-    `<strong>⚠️🔧"フォルダを作成しない" 設定のサブオプションを調整しました</strong><br>
-この設定のサブオプションは、より細かく制御できるように再設計されました。この設定を使っている場合は、必要なオプションをもう一度選び直してください。<br>
-<br>
-<strong>✨Ugoira の保存形式を調整しました</strong><br>
-- 追加された形式：WebP 画像（非可逆）、WebP 画像（可逆）、Ugoira ファイル<br>
-- 複数選択：以前は1つの形式しか選べませんでしたが、今は複数の形式を選べるようになり、1回のダウンロードで Ugoira を複数の形式で保存できます。<br>
-- デフォルト値の変更：以前のデフォルト形式は WebM 動画でしたが、現在は WebP 画像に変更されました。これは以前に選択した形式には影響せず、ダウンローダーの新規ユーザーにのみ影響します。<br>
-- 変換速度が少し向上しました。<br>
-- APNG 画像への変換時にページがフリーズしなくなりました。<br>
-<br>
-<strong>😊いくつかのヘルプ情報を改善しました</strong><br>`,
-    `<strong>⚠️🔧"폴더 만들지 않기" 설정의 하위 옵션을 조정했습니다</strong><br>
-이 설정의 하위 옵션을 더 세밀하게 제어할 수 있도록 다시 설계했습니다. 이 설정을 사용하고 있다면 필요한 옵션을 다시 선택해야 합니다.<br>
-<br>
-<strong>✨Ugoira 저장 형식을 조정했습니다</strong><br>
-- 새 형식 추가: WebP 이미지(손실), WebP 이미지(무손실), Ugoira 파일<br>
-- 다중 선택: 이전에는 한 가지 형식만 선택할 수 있었지만, 이제는 여러 형식을 선택해서 한 번의 다운로드로 Ugoira를 여러 형식으로 저장할 수 있습니다.<br>
-- 기본값 변경: 이전 기본 형식은 WebM 비디오였지만, 이제 WebP 이미지로 변경되었습니다. 이 변경은 이전에 선택한 형식에는 영향을 주지 않고, 다운로더의 신규 사용자에게만 영향을 줍니다.<br>
-- 변환 속도가 조금 빨라졌습니다.<br>
-- APNG 이미지로 변환할 때 더 이상 페이지가 멈추지 않습니다.<br>
-<br>
-<strong>😊일부 도움말 정보를 개선했습니다</strong><br>`,
-    `<strong>⚠️🔧Скорректированы подпункты настройки "Не создавать папки"</strong><br>
-Подпункты этой настройки были переработаны, чтобы дать более точный контроль. Если вы используете эту настройку, вам нужно заново выбрать нужные варианты.<br>
-<br>
-<strong>✨Скорректированы форматы сохранения Ugoira</strong><br>
-- Новые форматы: изображение WebP (с потерями), изображение WebP (без потерь), файл Ugoira<br>
-- Множественный выбор: раньше можно было выбрать только один формат, а теперь можно выбрать несколько форматов и сохранять Ugoira сразу в нескольких форматах за одну загрузку.<br>
-- Изменение значения по умолчанию: раньше форматом по умолчанию было видео WebM, а теперь это изображение WebP. Это не изменит формат, который вы выбрали раньше, и повлияет только на новых пользователей загрузчика.<br>
-- Скорость конвертации немного увеличена.<br>
-- При конвертации в изображение APNG страница больше не зависает.<br>
-<br>
-<strong>😊Улучшена некоторая справочная информация</strong><br>`,
+  _版本更新说明18_9_2: [
+    `<strong>🐞修复问题：在抓取过程中出现 404 错误时，抓取进度可能会卡住</strong><br>`,
+    `<strong>🐞修復問題：在抓取過程中出現 404 錯誤時，抓取進度可能會卡住</strong><br>`,
+    `<strong>🐞Fix: When a 404 error occurs during crawling, the crawl progress may get stuck</strong><br>`,
+    `<strong>🐞修正：crawl 中に 404 エラーが発生すると、進捗が止まることがある問題を修正</strong><br>`,
+    `<strong>🐞문제 수정: crawl 중에 404 오류가 발생하면 진행 상태가 멈출 수 있던 문제를 수정했습니다</strong><br>`,
+    `<strong>🐞Исправление: если во время crawl возникает ошибка 404, прогресс crawl может зависнуть</strong><br>`,
   ],
   _从插画漫画里下载1张图片时: [
     `从插画、漫画里下载 1 张图片时`,

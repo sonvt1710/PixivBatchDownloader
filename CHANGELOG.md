@@ -3,13 +3,15 @@
 在 Pixiv 的 console 里隐藏这些脚本的消息：
 -doubleclick.net -admanmedia.com -frame -popin -bpoadfkcbjbfhfodiogcnhhhpibjhbnh -_script.js -_app- -_app. -reach -ufs -pubads -google -tabool -openx -sync
 
-## next 2026-05-10
+## 18.9.2 2026-05-16
 
 ### 🐞修复问题：在抓取过程中出现 404 错误时，抓取进度可能会卡住
 
 这个问题比较隐蔽。有时出现 404 错误之后可以正常抓取后续作品，但有时会导致下载卡住。现在进行了修复。
 
-问题原因在 `src\ts\store\CacheWorkData.ts` 里的 `getWorkDataAsync` 方法里，当网络请求出错时不会清理缓存的作品 ID `this.pendingIds.delete(id)`。由于出错的作品的 ID 一直在缓存里，所以在同一个标签页会话里**重复**请求它时，可能会导致这个请求一直卡住。注意：该作品第一次出错时不会导致抓取卡住，必须是重复请求它时才可能出现该问题。
+问题原因在 `src\ts\store\CacheWorkData.ts` 里的 `getWorkDataAsync` 方法里，当网络请求出错时不会清理缓存的作品 ID `this.pendingIds.delete(id)`。由于出错的作品的 ID 一直在缓存里，所以在同一个标签页会话里**重复**请求它时，可能会导致这个请求一直卡住。注意：该作品第一次出错时不会导致抓取卡住，必须是重试请求它、或者之后再次抓取它时才可能出现该问题。
+
+### 🕑更新了作品发布时间数据
 
 ## 18.9.1 2026-05-10
 
