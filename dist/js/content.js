@@ -21840,20 +21840,24 @@ class Download {
         // 用户可以同时选择多种动图的保存格式，需要全部处理
         const needConvertFormats = [];
         // 当用户同时选择了多种格式时，只有最后 push 的那个会保存下载记录，所以在这个作品的下载记录里，文件名的扩展名就是最后保存的格式
-        // 不过这么做没什么实际作用。我把默认格式 webp 放在最后，是考虑到在特定情况下可能会避免一次重复下载：
-        // 如果用户选择了多种格式下载过了一次，之后又改成了只使用 WebP 格式下载；并且去重策略是“严格”（判断文件名），那么可以避免重复下载
-        if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsWebM)
-            needConvertFormats.push('webm');
-        if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsGIF)
-            needConvertFormats.push('gif');
-        if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsAPNG)
-            needConvertFormats.push('apng');
+        // 把不需要转换、能直接保存的 zip 文件放到最前面，优先保存。这样如果之后转换时出现了错误的话，至少已经保存了源文件
         if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsZIP)
             needConvertFormats.push('zip');
         if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsUgoira)
             needConvertFormats.push('ugoira');
+        // 把需要转换的格式放到后面。
+        // 先转换 WebP 格式，因为它现在是默认格式
         if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsWebP)
             needConvertFormats.push('webp');
+        // WebM 格式也是我比较推荐的格式，而且转换时占用的内存相对较少
+        if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsWebM)
+            needConvertFormats.push('webm');
+        // GIF 格式我不推荐，所以放到后面
+        if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsGIF)
+            needConvertFormats.push('gif');
+        // APNG 格式转换时占用的内存最多，耗时也比较久。有些用户反馈他们在转换 APNG 文件时总是失败，因此放到最后
+        if (_setting_Settings__WEBPACK_IMPORTED_MODULE_9__.settings.ugoiraSaveAsAPNG)
+            needConvertFormats.push('apng');
         if (needConvertFormats.length === 0) {
             // 如果用户没有选择任何动图格式，则不进行转换
             // 注意：此时下载器依然会保存原始 zip 文件，而不是跳过这个文件
